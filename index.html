@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Series Analyzer</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles */
+        .loader {
+            border: 5px solid #f3f3f3; /* Light grey */
+            border-top: 5px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <div class="container max-w-5xl mx-auto p-4 sm:p-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">
+            Flexible Time Series Analyzer
+        </h1>
+
+        <!-- Step 1: Upload Section -->
+        <div id="upload-section" class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 1: Inspect Your CSV</h2>
+            <form id="upload-form">
+                <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">
+                    Upload your .csv file:
+                </label>
+                <input type="file" id="file-upload" name="file" accept=".csv"
+                       class="block w-full text-sm text-gray-500
+                              file:mr-4 file:py-2 file:px-4
+                              file:rounded-lg file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-blue-50 file:text-blue-700
+                              hover:file:bg-blue-100 cursor-pointer"/>
+                <button type="submit"
+                        class="mt-4 w-full sm:w-auto inline-flex justify-center items-center px-6 py-2 border border-transparent
+                               text-base font-medium rounded-lg shadow-sm text-white bg-blue-600
+                               hover:bg-blue-700 focus:outline-none focus:ring-2
+                               focus:ring-offset-2 focus:ring-blue-500 transition">
+                    Inspect File
+                </button>
+            </form>
+            <div id="upload-loader" class="loader mx-auto my-4 hidden"></div>
+            <div id="upload-error" class="text-red-600 mt-4 hidden"></div>
+        </div>
+
+        <!-- Step 2: Column Selection Section -->
+        <div id="selection-section" class="bg-white p-6 rounded-lg shadow-md mt-8 hidden">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 2: Select Columns for Analysis</h2>
+            <p class="text-gray-600 mb-4">We found the following columns in <strong id="filename-span"></strong>. Please select your date/time column and the numeric value column you want to analyze.</p>
+            <form id="analyze-form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="date-column-select" class="block text-sm font-medium text-gray-700">
+                            Date/Time Column:
+                        </label>
+                        <select id="date-column-select" name="date_column"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300
+                                       focus:outline-none focus:ring-blue-500 focus:border-blue-500
+                                       sm:text-sm rounded-lg shadow-sm">
+                            <!-- Options will be populated by JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="value-column-select" class="block text-sm font-medium text-gray-700">
+                            Value Column (Numeric):
+                        </label>
+                        <select id="value-column-select" name="value_column"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300
+                                       focus:outline-none focus:ring-blue-500 focus:border-blue-500
+                                       sm:text-sm rounded-lg shadow-sm">
+                            <!-- Options will be populated by JS -->
+                        </select>
+                    </div>
+                </div>
+                <button type="submit"
+                        class="mt-6 w-full sm:w-auto inline-flex justify-center items-center px-6 py-2 border border-transparent
+                               text-base font-medium rounded-lg shadow-sm text-white bg-green-600
+                               hover:bg-green-700 focus:outline-none focus:ring-2
+                               focus:ring-offset-2 focus:ring-green-500 transition">
+                    Run Analysis
+                </button>
+            </form>
+        </div>
+        
+        <!-- Step 3: Results Section -->
+        <div id="results-section" class="mt-8 hidden">
+            <div id="analyze-loader" class="loader mx-auto my-8 hidden"></div>
+            <div id="analyze-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative hidden" role="alert">
+                <strong class="font-bold">Error:</strong>
+                <span class="block sm:inline" id="analyze-error-message"></span>
+            </div>
+            
+            <div id="results-content" class="hidden">
+                <h2 class="text-3xl font-semibold text-gray-800 mb-6">Analysis Results</h2>
+
+                <!-- Original Data Card -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-gray-700 mb-4">Original Data Analysis</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-center">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <span class="block text-sm font-medium text-blue-700">Mean</span>
+                            <span id="original-mean" class="text-2xl font-bold text-blue-900"></span>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <span class="block text-sm font-medium text-green-700">Variance</span>
+                            <span id="original-variance" class="text-2xl font-bold text-green-900"></span>
+                        </div>
+                        <div id="original-stationarity-box" class="p-4 rounded-lg">
+                            <span class="block text-sm font-medium">Stationarity (ADF Test)</span>
+                            <span id="original-stationarity" class="text-2xl font-bold"></span>
+                            <span id="original-p-value" class="text-sm block"></span>
+                        </div>
+                    </div>
+                    <img id="original-plot" src="" alt="Original Data Plot" class="w-full h-auto rounded-lg border border-gray-200 shadow-sm mt-4"/>
+                </div>
+
+                <!-- Stationary Data Card -->
+                <div id="stationary-results-container" class="bg-white p-6 rounded-lg shadow-md mt-8 hidden">
+                    <h3 class="text-2xl font-semibold text-gray-700 mb-4">Stationary Data (After Transformation)</h3>
+                     <p class="text-gray-600 mb-4">Your original data was non-stationary. We applied a transformation (1st-Order Differencing) to make it stationary.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-center">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <span class="block text-sm font-medium text-blue-700">New Mean</span>
+                            <span id="stationary-mean" class="text-2xl font-bold text-blue-900"></span>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <span class="block text-sm font-medium text-green-700">New Variance</span>
+                            <span id="stationary-variance" class="text-2xl font-bold text-green-900"></span>
+                        </div>
+                        <div id="stationary-stationarity-box" class="p-4 rounded-lg">
+                            <span class="block text-sm font-medium">New Stationarity (ADF Test)</span>
+                            <span id="stationary-stationarity" class="text-2xl font-bold"></span>
+                            <span id="stationary-p-value" class="text-sm block"></span>
+                        </div>
+                    </div>
+                    <img id="stationary-plot" src="" alt="Stationary Data Plot" class="w-full h-auto rounded-lg border border-gray-200 shadow-sm mt-4"/>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- API Base URL ---
+        const API_URL = "http://127.0.0.1:5000";
+
+        // --- Global State ---
+        let uploadedFile = null;
+
+        // --- DOM Elements ---
+        const uploadSection = document.getElementById("upload-section");
+        const uploadForm = document.getElementById("upload-form");
+        const fileUpload = document.getElementById("file-upload");
+        const uploadLoader = document.getElementById("upload-loader");
+        const uploadError = document.getElementById("upload-error");
+
+        const selectionSection = document.getElementById("selection-section");
+        const analyzeForm = document.getElementById("analyze-form");
+        const filenameSpan = document.getElementById("filename-span");
+        const dateColumnSelect = document.getElementById("date-column-select");
+        const valueColumnSelect = document.getElementById("value-column-select");
+
+        const resultsSection = document.getElementById("results-section");
+        const analyzeLoader = document.getElementById("analyze-loader");
+        const analyzeError = document.getElementById("analyze-error");
+        const analyzeErrorMessage = document.getElementById("analyze-error-message");
+        const resultsContent = document.getElementById("results-content");
+
+        const originalMean = document.getElementById("original-mean");
+        const originalVariance = document.getElementById("original-variance");
+        const originalStationarity = document.getElementById("original-stationarity");
+        const originalPValue = document.getElementById("original-p-value");
+        const originalStationarityBox = document.getElementById("original-stationarity-box");
+        const originalPlot = document.getElementById("original-plot");
+
+        const stationaryResultsContainer = document.getElementById("stationary-results-container");
+        const stationaryMean = document.getElementById("stationary-mean");
+        const stationaryVariance = document.getElementById("stationary-variance");
+        const stationaryStationarity = document.getElementById("stationary-stationarity");
+        const stationaryPValue = document.getElementById("stationary-p-value");
+        const stationaryStationarityBox = document.getElementById("stationary-stationarity-box");
+        const stationaryPlot = document.getElementById("stationary-plot");
+
+
+        // --- Event Listener: Step 1 (Inspect) ---
+        uploadForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const file = fileUpload.files[0];
+            if (!file) {
+                showUploadError("Please select a file.");
+                return;
+            }
+            uploadedFile = file; // Store file for step 2
+            
+            showUploadLoader(true);
+            showUploadError(null);
+            selectionSection.classList.add("hidden");
+            resultsSection.classList.add("hidden");
+
+
+            const formData = new FormData();
+            formData.append("file", uploadedFile);
+
+            try {
+                const response = await fetch(`${API_URL}/inspect-csv`, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to inspect file.");
+                }
+
+                // Populate dropdowns
+                populateSelect(dateColumnSelect, data.columns);
+                populateSelect(valueColumnSelect, data.columns);
+                filenameSpan.textContent = data.filename;
+                
+                // Show next step
+                uploadSection.classList.add("hidden");
+                selectionSection.classList.remove("hidden");
+
+            } catch (error) {
+                showUploadError(error.message);
+            } finally {
+                showUploadLoader(false);
+            }
+        });
+
+        // --- Event Listener: Step 2 (Analyze) ---
+        analyzeForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const dateColumn = dateColumnSelect.value;
+            const valueColumn = valueColumnSelect.value;
+
+            if (!dateColumn || !valueColumn) {
+                showAnalyzeError("Please select both a date and a value column.");
+                return;
+            }
+            
+            if (dateColumn === valueColumn) {
+                showAnalyzeError("Date and Value columns cannot be the same.");
+                return;
+            }
+
+            showAnalyzeLoader(true);
+            showAnalyzeError(null);
+            resultsContent.classList.add("hidden");
+            resultsSection.classList.remove("hidden");
+
+            const formData = new FormData();
+            formData.append("file", uploadedFile);
+            formData.append("date_column", dateColumn);
+            formData.append("value_column", valueColumn);
+
+            try {
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to analyze data.");
+                }
+                
+                displayResults(data);
+                resultsContent.classList.remove("hidden");
+
+            } catch (error) {
+                showAnalyzeError(error.message);
+            } finally {
+                showAnalyzeLoader(false);
+            }
+        });
+
+        // --- Helper Function: Display Results ---
+        function displayResults(data) {
+            // Original Data
+            const orig = data.original_data;
+            originalMean.textContent = parseFloat(orig.mean).toFixed(4);
+            originalVariance.textContent = parseFloat(orig.variance).toFixed(4);
+            originalPlot.src = `data:image/png;base64,${orig.plot_base64}`;
+            
+            const origTest = orig.stationarity_test;
+            if (origTest.is_stationary) {
+                originalStationarity.textContent = "Stationary";
+                originalStationarity.className = "text-2xl font-bold text-green-700";
+                originalStationarityBox.className = "p-4 rounded-lg bg-green-50";
+            } else {
+                originalStationarity.textContent = "Non-Stationary";
+                originalStationarity.className = "text-2xl font-bold text-red-700";
+                originalStationarityBox.className = "p-4 rounded-lg bg-red-50";
+            }
+            originalPValue.textContent = `(p-value: ${parseFloat(origTest.p_value).toFixed(4)})`;
+
+            // Stationary Data
+            const stat = data.stationary_results;
+            if (stat && !stat.error) {
+                stationaryMean.textContent = parseFloat(stat.mean).toFixed(4);
+                stationaryVariance.textContent = parseFloat(stat.variance).toFixed(4);
+                stationaryPlot.src = `data:image/png;base64,${stat.plot_base64}`;
+
+                const statTest = stat.stationarity_test;
+                if (statTest.is_stationary) {
+                    stationaryStationarity.textContent = "Stationary";
+                    stationaryStationarity.className = "text-2xl font-bold text-green-700";
+                    stationaryStationarityBox.className = "p-4 rounded-lg bg-green-50";
+                } else {
+                    stationaryStationarity.textContent = "Non-Stationary";
+                    stationaryStationarity.className = "text-2xl font-bold text-red-700";
+                    stationaryStationarityBox.className = "p-4 rounded-lg bg-red-50";
+                }
+                stationaryPValue.textContent = `(p-value: ${parseFloat(statTest.p_value).toFixed(4)})`;
+
+                stationaryResultsContainer.classList.remove("hidden");
+            } else {
+                stationaryResultsContainer.classList.add("hidden");
+            }
+        }
+
+        // --- Helper Function: Populate Select ---
+        function populateSelect(selectElement, columns) {
+            selectElement.innerHTML = ""; // Clear old options
+            
+            // Add a default placeholder
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "-- Select a column --";
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            selectElement.appendChild(placeholder);
+
+            columns.forEach(column => {
+                const option = document.createElement("option");
+                option.value = column;
+                option.textContent = column;
+                selectElement.appendChild(option);
+            });
+        }
+        
+        // --- UI Helpers ---
+        function showUploadLoader(isLoading) {
+            uploadLoader.classList.toggle("hidden", !isLoading);
+        }
+        
+        function showUploadError(message) {
+            if (message) {
+                uploadError.textContent = message;
+                uploadError.classList.remove("hidden");
+            } else {
+                uploadError.classList.add("hidden");
+            }
+        }
+        
+        function showAnalyzeLoader(isLoading) {
+            analyzeLoader.classList.toggle("hidden", !isLoading);
+        }
+
+        function showAnalyzeError(message) {
+            if (message) {
+                analyzeErrorMessage.textContent = message;
+                analyzeError.classList.remove("hidden");
+            } else {
+                analyzeError.classList.add("hidden");
+            }
+        }
+
+    </script>
+</body>
+</html>
