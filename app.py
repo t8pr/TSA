@@ -2,22 +2,28 @@ import pandas as pd
 import io
 import base64
 import matplotlib.pyplot as plt
-from flask import Flask, request, jsonify
+# Import render_template
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from statsmodels.tsa.stattools import adfuller
-# Import numpy to handle its types if necessary, though explicit conversion is better
 import numpy as np
 
 # --- Matplotlib Configuration ---
-# Use 'Agg' backend for non-interactive plotting (essential for servers)
 plt.switch_backend('Agg')
 
 # --- Initialize Flask App ---
-app = Flask(__name__)
-# Enable CORS (Cross-Origin Resource Sharing)
-# This is VITAL to allow your index.html (on a file:// URL)
-# to talk to your server (on http://127.0.0.1:5000)
+# Point 'static_folder' to None if you don't have one,
+# and specify the 'templates' folder.
+app = Flask(__name__, template_folder='templates')
 CORS(app)
+
+# --- NEW: Route to Serve the HTML Webpage ---
+@app.route('/')
+def home():
+    """
+    This new route serves your index.html file from the 'templates' folder.
+    """
+    return render_template('index.html')
 
 # --- Helper Function: Create and Encode Plot ---
 def create_plot_base64(series: pd.Series, title: str, xlabel: str = "Time", ylabel: str = "Value") -> str:
@@ -66,7 +72,7 @@ def check_stationarity(timeseries: pd.Series):
             "adf_statistic": float(result[0]),
             "p_value": float(p_value),
             "critical_values": {k: float(v) for k, v in result[4].items()},
-            "is_stationary": bool(is_stationary), # This was the line causing the "bool_" error
+            "is_stationary": bool(is_stationary),
             "interpretation": f"p-value: {p_value:.4f}. Data is {'stationary' if is_stationary else 'non-stationary'}."
         }
     except Exception as e:
@@ -161,7 +167,6 @@ def analyze_time_series():
     # --- 3. Perform Analysis ---
     
     # Calculate Mean and Variance for original data
-    # FIX: Convert numpy types to standard float
     original_mean = float(ts.mean())
     original_variance = float(ts.var())
     
@@ -214,7 +219,6 @@ def analyze_time_series():
             "date_column": date_column,
             "value_column": value_column,
             "data_cleaning": {
-                # FIX: Convert numpy int types to standard int
                 "original_rows": int(original_rows),
                 "cleaned_rows": int(cleaned_rows),
                 "rows_dropped": int(original_rows - cleaned_rows)
@@ -231,6 +235,8 @@ def analyze_time_series():
     
     return jsonify(response_data)
 
+
+# This block allows you to run the app directly with `python app.py`
 if __name__ == "__main__":
     app.run(debug=True)
 
