@@ -1,6 +1,9 @@
-flask
-flask-cors
+Flask
+Flask-Cors
 pandas
-statsmodels
 matplotlib
+statsmodels
+scikit-learn
+numpy
 gunicorn
+pmdarima

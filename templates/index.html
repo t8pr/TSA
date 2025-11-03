@@ -1,19 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time Series Analyzer</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
         /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark background */
+            color: #d1d5db; /* Light text */
+        }
+        
+        /* Gradient text (now solid blue) */
+        .gradient-text {
+            color: #60a5fa; /* tailwind-blue-400 */
+        }
+
+        /* Custom file upload area */
+        .file-drop-area {
+            transition: all 0.3s ease;
+        }
+        .file-drop-area.drag-over {
+            border-color: #3b82f6; /* Blue */
+            background-color: #1f2937; /* Darker gray */
+        }
+        
+        /* Custom loader */
         .loader {
-            border: 5px solid #f3f3f3; /* Light grey */
-            border-top: 5px solid #3498db; /* Blue */
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
             border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .section-loader {
             width: 50px;
             height: 50px;
+            border: 5px solid #374151; /* Gray-700 */
+            border-top-color: #3b82f6; /* Blue-500 */
+            border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
@@ -21,221 +55,465 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Custom select and input for dark mode */
+        select,
+        input[type="number"] {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        
+        input[type="number"] {
+            background-image: none; /* Remove arrow from number input */
+            -moz-appearance: textfield; /* Firefox */
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
     </style>
 </head>
-<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+<body class="bg-gray-900 font-sans leading-normal tracking-normal text-gray-300">
+
+    <!-- Icons -->
+    <svg width="0" height="0" class="absolute">
+      <defs>
+        <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+        </symbol>
+        <symbol id="icon-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+            <polyline points="13 2 13 9 20 9"></polyline>
+        </symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </symbol>
+        <symbol id="icon-analyze" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+        </symbol>
+        <!-- NEW ICON for summary -->
+        <symbol id="icon-brain" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 9.5 7v0A2.5 2.5 0 0 1 7 9.5v0A2.5 2.5 0 0 1 9.5 12v0A2.5 2.5 0 0 1 7 14.5v0A2.5 2.5 0 0 1 9.5 17v0A2.5 2.5 0 0 1 7 19.5v0A2.5 2.5 0 0 1 9.5 22M14.5 2a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5"/>
+            <path d="M2 12h5.5"/>
+            <path d="M16.5 12H22"/>
+            <path d="M12 7.5v9"/>
+            <path d="M7 14.5v-5"/>
+        </symbol>
+      </defs>
+    </svg>
 
     <div class="container max-w-5xl mx-auto p-4 sm:p-8">
-        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">
-            Flexible Time Series Analyzer
-        </h1>
+        
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold text-white">
+                Time Series <span class="gradient-text">Analyzer</span>
+            </h1>
+            <p class="text-xl text-gray-400 mt-4">
+                Your AI-powered assistant for statistical analysis.
+            </p>
+        </div>
+
+        <!-- Error Banners -->
+        <div id="upload-error" class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative mb-6 hidden" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="upload-error-msg"></span>
+        </div>
+        <div id="analyze-error" class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative mb-6 hidden" role="alert">
+            <strong class="font-bold">Analysis Error!</strong>
+            <span class="block sm:inline" id="analyze-error-msg"></span>
+        </div>
 
         <!-- Step 1: Upload Section -->
-        <div id="upload-section" class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 1: Inspect Your CSV</h2>
+        <div id="upload-section" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+            <h2 class="text-2xl font-semibold text-white mb-5 flex items-center">
+                <span class="bg-blue-600 rounded-full w-8 h-8 text-white font-bold flex items-center justify-center mr-3">1</span>
+                Upload & Inspect File
+            </h2>
             <form id="upload-form">
-                <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">
-                    Upload your .csv file:
+                <input type="file" id="file-upload" name="file" accept=".csv" class="hidden"/>
+                <label for="file-upload" id="file-drop-area"
+                       class="file-drop-area relative block w-full border-2 border-dashed border-gray-600 rounded-lg p-10 text-center cursor-pointer hover:border-blue-500 hover:bg-gray-700/50">
+                    <div class="flex flex-col items-center justify-center">
+                        <svg class="w-12 h-12 text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><use href="#icon-upload"></use></svg>
+                        <p class="text-lg font-medium text-gray-300" id="file-drop-text">
+                            Drag & drop your CSV file here
+                        </p>
+                        <p class="text-sm text-gray-500">or click to browse</p>
+                    </div>
                 </label>
-                <input type="file" id="file-upload" name="file" accept=".csv"
-                       class="block w-full text-sm text-gray-500
-                              file:mr-4 file:py-2 file:px-4
-                              file:rounded-lg file:border-0
-                              file:text-sm file:font-semibold
-                              file:bg-blue-50 file:text-blue-700
-                              hover:file:bg-blue-100 cursor-pointer"/>
+                
                 <button type="submit"
-                        class="mt-4 w-full sm:w-auto inline-flex justify-center items-center px-6 py-2 border border-transparent
-                               text-base font-medium rounded-lg shadow-sm text-white bg-blue-600
-                               hover:bg-blue-700 focus:outline-none focus:ring-2
-                               focus:ring-offset-2 focus:ring-blue-500 transition">
-                    Inspect File
+                        class="mt-6 w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 
+                               font-semibold rounded-lg shadow-sm text-white 
+                               bg-gradient-to-r from-blue-600 to-purple-600
+                               hover:from-blue-700 hover:to-purple-700 
+                               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
+                               focus:ring-offset-gray-900 transition duration-300 ease-in-out">
+                    <div id="upload-loader" class="loader hidden mr-2"></div>
+                    <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><use href="#icon-file"></use></svg>
+                    <span id="upload-btn-text">Inspect File</span>
                 </button>
             </form>
-            <div id="upload-loader" class="loader mx-auto my-4 hidden"></div>
-            <div id="upload-error" class="text-red-600 mt-4 hidden"></div>
         </div>
 
         <!-- Step 2: Column Selection Section -->
-        <div id="selection-section" class="bg-white p-6 rounded-lg shadow-md mt-8 hidden">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 2: Select Columns for Analysis</h2>
-            <p class="text-gray-600 mb-4">We found the following columns in <strong id="filename-span"></strong>. Please select your date/time column and the numeric value column you want to analyze.</p>
+        <div id="selection-section" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 mt-8 hidden">
+            <h2 class="text-2xl font-semibold text-white mb-5 flex items-center">
+                <span class="bg-green-600 rounded-full w-8 h-8 text-white font-bold flex items-center justify-center mr-3">2</span>
+                Select Columns
+            </h2>
+            <p class="text-base text-gray-400 mb-6">Select your data columns to analyze.</p>
             <form id="analyze-form">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Date Column -->
                     <div>
-                        <label for="date-column-select" class="block text-sm font-medium text-gray-700">
-                            Date/Time Column:
-                        </label>
+                        <label for="date-column-select" class="block text-sm font-medium text-gray-400 mb-1">Date/Time Column</label>
                         <select id="date-column-select" name="date_column"
-                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300
-                                       focus:outline-none focus:ring-blue-500 focus:border-blue-500
-                                       sm:text-sm rounded-lg shadow-sm">
+                                class="mt-1 block w-full pl-3 pr-10 py-3 text-base text-white bg-gray-700 
+                                       border-gray-600 focus:outline-none focus:ring-blue-500 
+                                       focus:border-blue-500 sm:text-sm rounded-lg shadow-sm">
                             <!-- Options will be populated by JS -->
                         </select>
                     </div>
+                    <!-- Value Column -->
                     <div>
-                        <label for="value-column-select" class="block text-sm font-medium text-gray-700">
-                            Value Column (Numeric):
-                        </label>
+                        <label for="value-column-select" class="block text-sm font-medium text-gray-400 mb-1">Value Column (to Analyze)</label>
                         <select id="value-column-select" name="value_column"
-                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300
-                                       focus:outline-none focus:ring-blue-500 focus:border-blue-500
-                                       sm:text-sm rounded-lg shadow-sm">
+                                class="mt-1 block w-full pl-3 pr-10 py-3 text-base text-white bg-gray-700 
+                                       border-gray-600 focus:outline-none focus:ring-blue-500 
+                                       focus:border-blue-500 sm:text-sm rounded-lg shadow-sm">
                             <!-- Options will be populated by JS -->
                         </select>
                     </div>
                 </div>
                 <button type="submit"
-                        class="mt-6 w-full sm:w-auto inline-flex justify-center items-center px-6 py-2 border border-transparent
-                               text-base font-medium rounded-lg shadow-sm text-white bg-green-600
-                               hover:bg-green-700 focus:outline-none focus:ring-2
-                               focus:ring-offset-2 focus:ring-green-500 transition">
-                    Run Analysis
+                        class="mt-8 w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 
+                               font-semibold rounded-lg shadow-sm text-white 
+                               bg-gradient-to-r from-green-500 to-teal-500 
+                               hover:from-green-600 hover:to-teal-600 
+                               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 
+                               focus:ring-offset-gray-900 transition duration-300 ease-in-out">
+                    <div id="analyze-loader" class="loader hidden mr-2"></div>
+                    <svg class="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><use href="#icon-analyze"></use></svg>
+                    <span id="analyze-btn-text">Start Analysis</span>
                 </button>
             </form>
         </div>
         
         <!-- Step 3: Results Section -->
         <div id="results-section" class="mt-8 hidden">
-            <div id="analyze-loader" class="loader mx-auto my-8 hidden"></div>
-            <div id="analyze-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative hidden" role="alert">
-                <strong class="font-bold">Error:</strong>
-                <span class="block sm:inline" id="analyze-error-message"></span>
+            <!-- Loader for results -->
+            <div id="results-loader" class="flex justify-center items-center h-40">
+                <div class="section-loader"></div>
             </div>
             
-            <div id="results-content" class="hidden">
-                <h2 class="text-3xl font-semibold text-gray-800 mb-6">Analysis Results</h2>
-
-                <!-- Original Data Card -->
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-2xl font-semibold text-gray-700 mb-4">Original Data Analysis</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-center">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <span class="block text-sm font-medium text-blue-700">Mean</span>
-                            <span id="original-mean" class="text-2xl font-bold text-blue-900"></span>
-                        </div>
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <span class="block text-sm font-medium text-green-700">Variance</span>
-                            <span id="original-variance" class="text-2xl font-bold text-green-900"></span>
-                        </div>
-                        <div id="original-stationarity-box" class="p-4 rounded-lg">
-                            <span class="block text-sm font-medium">Stationarity (ADF Test)</span>
-                            <span id="original-stationarity" class="text-2xl font-bold"></span>
-                            <span id="original-p-value" class="text-sm block"></span>
-                        </div>
-                    </div>
-                    <img id="original-plot" src="" alt="Original Data Plot" class="w-full h-auto rounded-lg border border-gray-200 shadow-sm mt-4"/>
+            <!-- Content for results -->
+            <div id="results-content" class="hidden space-y-8">
+                <div class="text-center">
+                    <h2 class="text-4xl font-extrabold text-white">Analysis <span class="gradient-text">Results</span></h2>
                 </div>
 
-                <!-- Stationary Data Card -->
-                <div id="stationary-results-container" class="bg-white p-6 rounded-lg shadow-md mt-8 hidden">
-                    <h3 class="text-2xl font-semibold text-gray-700 mb-4">Stationary Data (After Transformation)</h3>
-                     <p class="text-gray-600 mb-4">Your original data was non-stationary. We applied a transformation (1st-Order Differencing) to make it stationary.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-center">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <span class="block text-sm font-medium text-blue-700">New Mean</span>
-                            <span id="stationary-mean" class="text-2xl font-bold text-blue-900"></span>
+                <!-- Result Card: Original Data -->
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+                    <h3 class="text-2xl font-semibold text-white mb-5">Original Data</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- Stats -->
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-lg font-medium text-gray-200">Base Statistics</h4>
+                            <ul class="mt-3 text-gray-300 space-y-2">
+                                <li><strong>Mean:</strong> <span id="original-mean" class="text-white font-semibold"></span></li>
+                                <li><strong>Variance:</strong> <span id="original-variance" class="text-white font-semibold"></span></li>
+                            </ul>
                         </div>
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <span class="block text-sm font-medium text-green-700">New Variance</span>
-                            <span id="stationary-variance" class="text-2xl font-bold text-green-900"></span>
-                        </div>
-                        <div id="stationary-stationarity-box" class="p-4 rounded-lg">
-                            <span class="block text-sm font-medium">New Stationarity (ADF Test)</span>
-                            <span id="stationary-stationarity" class="text-2xl font-bold"></span>
-                            <span id="stationary-p-value" class="text-sm block"></span>
+                        <!-- Stationarity -->
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-lg font-medium text-gray-200">Stationarity Test (ADF)</h4>
+                            <ul class="mt-3 text-gray-300 space-y-2">
+                                <li><strong>Stationary?</strong> <span id="original-stationary" class="font-bold"></span></li>
+                                <li><small class="text-gray-500" id="original-p-value"></small></li>
+                            </ul>
                         </div>
                     </div>
-                    <img id="stationary-plot" src="" alt="Stationary Data Plot" class="w-full h-auto rounded-lg border border-gray-200 shadow-sm mt-4"/>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-lg font-medium text-white mb-3">Original Time Series Plot</h4>
+                            <div class="bg-white p-2 rounded-lg shadow-sm">
+                                <img id="original-plot" src="" alt="Original Data Plot" class="w-full h-auto rounded-md"/>
+                            </div>
+                        </div>
+                        <div id="lag-plot-container" class="hidden">
+                            <h4 class="text-lg font-medium text-white mb-3">Lag Plot</h4>
+                            <div class="bg-white p-2 rounded-lg shadow-sm">
+                                <img id="lag-plot" src="" alt="Lag Plot" class="w-full h-auto rounded-md"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="rolling-stats-container" class="mt-6 hidden">
+                        <h4 class="text-lg font-medium text-white mt-6 mb-3">Rolling Mean & Std. Deviation</h4>
+                        <div class="bg-white p-2 rounded-lg shadow-sm">
+                            <img id="rolling-stats-plot" src="" alt="Rolling Stats Plot" class="w-full h-auto rounded-md"/>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Result Card: Seasonal Decomposition -->
+                <div id="decomposition-container" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 hidden">
+                    <h3 class="text-2xl font-semibold text-white mb-4">Seasonal Decomposition</h3>
+                    <p class="text-sm text-gray-400 mb-5">
+                        Breaks the series into trend, seasonal, and residual components.
+                    </p>
+                    <div class="bg-white p-2 rounded-lg shadow-sm">
+                        <img id="decomposition-plot" src="" alt="Decomposition Plot" class="w-full h-auto rounded-md"/>
+                    </div>
+                </div>
+
+                <!-- Result Card: Stationary Data -->
+                <div id="stationary-results-container" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 hidden">
+                    <h3 class="text-2xl font-semibold text-white mb-4">Transformed (Stationary) Data</h3>
+                    <p id="stationary-method" class="text-blue-400 mb-5 font-medium"></p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- Stats -->
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-lg font-medium text-gray-200">New Statistics</h4>
+                            <ul class="mt-3 text-gray-300 space-y-2">
+                                <li><strong>Mean:</strong> <span id="stationary-mean" class="text-white font-semibold"></span></li>
+                                <li><strong>Variance:</strong> <span id="stationary-variance" class="text-white font-semibold"></span></li>
+                            </ul>
+                        </div>
+                        <!-- Stationarity -->
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-lg font-medium text-gray-200">New Stationarity Test (ADF)</h4>
+                            <ul class="mt-3 text-gray-300 space-y-2">
+                                <li><strong>Stationary?</strong> <span id="stationary-stationary" class="font-bold"></span></li>
+                                <li><small class="text-gray-500" id="stationary-p-value"></small></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-lg font-medium text-white mt-6 mb-3">Transformed Time Series Plot</h4>
+                    <div class="bg-white p-2 rounded-lg shadow-sm">
+                        <img id="stationary-plot" src="" alt="Stationary Data Plot" class="w-full h-auto rounded-md"/>
+                    </div>
+                </div>
+                
+                <!-- Result Card: ARIMA -->
+                <div id="arima-results-container" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 hidden">
+                    <h3 class="text-2xl font-semibold text-white mb-4">ARIMA(1,1,1) Trial Model</h3>
+                    
+                    <p class="text-sm text-gray-400 mb-2" id="arima-preprocessing-msg"></p>
+                    <p class="text-sm text-gray-400 mb-5" id="arima-log-msg"></p>
+                    
+                    <h4 class="text-lg font-medium text-white mt-6 mb-3">ACF/PACF Plots (of differenced data)</h4>
+                    <p class="text-sm text-gray-400 mb-3">
+                        Used to estimate 'p' (from PACF) and 'q' (from ACF) parameters.
+                    </p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-2 rounded-lg shadow-sm">
+                            <img id="acf-plot" src="" alt="ACF Plot" class="w-full h-auto rounded-md"/>
+                        </div>
+                        <div class="bg-white p-2 rounded-lg shadow-sm">
+                            <img id="pacf-plot" src="" alt="PACF Plot" class="w-full h-auto rounded-md"/>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-lg font-medium text-white mt-6 mb-3">Forecast Evaluation (80% Train / 20% Test)</h4>
+                    <div class="bg-white p-2 rounded-lg shadow-sm mb-4">
+                        <img id="forecast-plot" src="" alt="Forecast Plot" class="w-full h-auto rounded-md"/>
+                    </div>
+                    
+                    <div class="bg-gray-900 p-4 rounded-lg">
+                        <h5 class="text-md font-medium text-gray-200">Forecast Metrics</h5>
+                        <ul class="mt-3 text-gray-300 space-y-2">
+                            <li><strong>RMSE (Root Mean Squared Error):</strong> <span id="arima-rmse" class="text-white font-semibold"></span></li>
+                            <li><strong>MAE (Mean Absolute Error):</strong> <span id="arima-mae" class="text-white font-semibold"></span></li>
+                        </ul>
+                    </div>
+
+                    <h4 class="text-lg font-medium text-white mt-6 mb-3">Residual Diagnostics</h4>
+                    <p class="text-sm text-gray-400 mb-3">
+                        Model errors should ideally be random, un-correlated noise.
+                    </D>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-2 rounded-lg shadow-sm">
+                            <img id="residual-plot" src="" alt="Residual Time/Density Plot" class="w-full h-auto rounded-md"/>
+                        </div>
+                        <div class="bg-white p-2 rounded-lg shadow-sm">
+                            <img id="residual-acf-plot" src="" alt="Residual ACF Plot" class="w-full h-auto rounded-md"/>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NEW: Result Card: Final Summary -->
+                <div id="final-summary-container" class="bg-gray-800 rounded-2xl shadow-lg border border-blue-600/50 hidden">
+                    <div class="p-6">
+                        <div class="flex items-center">
+                            <svg class="w-10 h-10 text-blue-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><use href="#icon-brain"></use></svg>
+                            <div>
+                                <h3 class="text-2xl font-semibold text-white">Final Summary & Recommendation</h3>
+                                <p id="summary-title" class="text-lg font-medium text-blue-400"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-gray-200">Recommendation:</h4>
+                                <p id="summary-recommendation" class="text-gray-300 leading-relaxed"></p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-200">Next Steps:</h4>
+                                <p id="summary-next-steps" class="text-gray-300 leading-relaxed"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
     <script>
         // --- API Base URL ---
-        const API_URL = "http://127.0.0.1:5000";
+        const API_URL = "";
 
         // --- Global State ---
         let uploadedFile = null;
 
         // --- DOM Elements ---
-        const uploadSection = document.getElementById("upload-section");
+        const selectionSection = document.getElementById("selection-section");
+        const resultsSection = document.getElementById("results-section");
         const uploadForm = document.getElementById("upload-form");
         const fileUpload = document.getElementById("file-upload");
         const uploadLoader = document.getElementById("upload-loader");
+        const uploadBtnText = document.getElementById("upload-btn-text");
         const uploadError = document.getElementById("upload-error");
-
-        const selectionSection = document.getElementById("selection-section");
+        const uploadErrorMsg = document.getElementById("upload-error-msg");
+        const fileDropArea = document.getElementById("file-drop-area");
+        const fileDropText = document.getElementById("file-drop-text");
         const analyzeForm = document.getElementById("analyze-form");
-        const filenameSpan = document.getElementById("filename-span");
         const dateColumnSelect = document.getElementById("date-column-select");
         const valueColumnSelect = document.getElementById("value-column-select");
-
-        const resultsSection = document.getElementById("results-section");
         const analyzeLoader = document.getElementById("analyze-loader");
+        const analyzeBtnText = document.getElementById("analyze-btn-text");
         const analyzeError = document.getElementById("analyze-error");
-        const analyzeErrorMessage = document.getElementById("analyze-error-message");
+        const analyzeErrorMsg = document.getElementById("analyze-error-msg");
+        const resultsLoader = document.getElementById("results-loader");
         const resultsContent = document.getElementById("results-content");
 
+        // --- Result Fields (Base) ---
         const originalMean = document.getElementById("original-mean");
         const originalVariance = document.getElementById("original-variance");
-        const originalStationarity = document.getElementById("original-stationarity");
+        const originalStationary = document.getElementById("original-stationary");
         const originalPValue = document.getElementById("original-p-value");
-        const originalStationarityBox = document.getElementById("original-stationarity-box");
         const originalPlot = document.getElementById("original-plot");
+        const lagPlot = document.getElementById("lag-plot");
+        const lagPlotContainer = document.getElementById("lag-plot-container");
+        const rollingStatsPlot = document.getElementById("rolling-stats-plot");
+        const rollingStatsContainer = document.getElementById("rolling-stats-container");
 
+        // --- Result Fields (Decomposition) ---
+        const decompositionContainer = document.getElementById("decomposition-container");
+        const decompositionPlot = document.getElementById("decomposition-plot");
+
+        // --- Result Fields (Stationary) ---
         const stationaryResultsContainer = document.getElementById("stationary-results-container");
+        const stationaryMethod = document.getElementById("stationary-method");
         const stationaryMean = document.getElementById("stationary-mean");
         const stationaryVariance = document.getElementById("stationary-variance");
-        const stationaryStationarity = document.getElementById("stationary-stationarity");
+        const stationaryStationary = document.getElementById("stationary-stationary");
         const stationaryPValue = document.getElementById("stationary-p-value");
-        const stationaryStationarityBox = document.getElementById("stationary-stationarity-box");
         const stationaryPlot = document.getElementById("stationary-plot");
 
+        // --- Result Fields (ARIMA) ---
+        const arimaResultsContainer = document.getElementById("arima-results-container");
+        const arimaPreprocessingMsg = document.getElementById("arima-preprocessing-msg");
+        const arimaLogMsg = document.getElementById("arima-log-msg");
+        const acfPlot = document.getElementById("acf-plot");
+        const pacfPlot = document.getElementById("pacf-plot");
+        const forecastPlot = document.getElementById("forecast-plot");
+        const arimaRmse = document.getElementById("arima-rmse");
+        const arimaMae = document.getElementById("arima-mae");
+        const residualPlot = document.getElementById("residual-plot");
+        const residualAcfPlot = document.getElementById("residual-acf-plot");
+
+        // --- NEW: Result Fields (Final Summary) ---
+        const finalSummaryContainer = document.getElementById("final-summary-container");
+        const summaryTitle = document.getElementById("summary-title");
+        const summaryRecommendation = document.getElementById("summary-recommendation");
+        const summaryNextSteps = document.getElementById("summary-next-steps");
+
+
+        // --- File Drop Area Logic ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, () => fileDropArea.classList.add('drag-over'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, () => fileDropArea.classList.remove('drag-over'), false);
+        });
+        fileDropArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                fileUpload.files = files; 
+                updateFileDropText(files[0].name);
+            }
+        }, false);
+        fileUpload.addEventListener('change', () => {
+             if (fileUpload.files.length > 0) {
+                updateFileDropText(fileUpload.files[0].name);
+            }
+        });
+        function updateFileDropText(filename) {
+            fileDropText.innerHTML = `
+                <svg class="w-12 h-12 text-green-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><use href="#icon-check"></use></svg>
+                <p class="text-lg font-medium text-gray-300">${filename}</p>
+                <p class="text-sm text-gray-500">File selected. Click 'Inspect File' to continue.</p>
+            `;
+        }
 
         // --- Event Listener: Step 1 (Inspect) ---
         uploadForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            
-            const file = fileUpload.files[0];
-            if (!file) {
-                showUploadError("Please select a file.");
+            showUploadError(null);
+            if (!fileUpload.files || fileUpload.files.length === 0) {
+                showUploadError("Please select a file first.");
                 return;
             }
-            uploadedFile = file; // Store file for step 2
-            
-            showUploadLoader(true);
-            showUploadError(null);
-            selectionSection.classList.add("hidden");
-            resultsSection.classList.add("hidden");
-
-
+            uploadedFile = fileUpload.files[0];
             const formData = new FormData();
             formData.append("file", uploadedFile);
-
+            showUploadLoader(true);
             try {
                 const response = await fetch(`${API_URL}/inspect-csv`, {
                     method: "POST",
                     body: formData,
                 });
-
                 const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || "Failed to inspect file.");
-                }
-
-                // Populate dropdowns
+                if (!response.ok) throw new Error(data.error || "Failed to inspect file.");
                 populateSelect(dateColumnSelect, data.columns);
                 populateSelect(valueColumnSelect, data.columns);
-                filenameSpan.textContent = data.filename;
-                
-                // Show next step
-                uploadSection.classList.add("hidden");
                 selectionSection.classList.remove("hidden");
-
+                resultsSection.classList.add("hidden"); 
+                resultsContent.classList.add("hidden");
             } catch (error) {
+                console.error("Error inspecting file:", error);
                 showUploadError(error.message);
             } finally {
                 showUploadLoader(false);
@@ -245,47 +523,47 @@
         // --- Event Listener: Step 2 (Analyze) ---
         analyzeForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-
+            showAnalyzeError(null);
             const dateColumn = dateColumnSelect.value;
             const valueColumn = valueColumnSelect.value;
-
             if (!dateColumn || !valueColumn) {
-                showAnalyzeError("Please select both a date and a value column.");
+                showAnalyzeError("Please select both a date column and a value column.");
                 return;
             }
-            
             if (dateColumn === valueColumn) {
-                showAnalyzeError("Date and Value columns cannot be the same.");
+                showAnalyzeError("Date column and value column cannot be the same.");
                 return;
             }
-
-            showAnalyzeLoader(true);
-            showAnalyzeError(null);
-            resultsContent.classList.add("hidden");
-            resultsSection.classList.remove("hidden");
-
             const formData = new FormData();
             formData.append("file", uploadedFile);
             formData.append("date_column", dateColumn);
             formData.append("value_column", valueColumn);
+            
+            showAnalyzeLoader(true);
+            resultsSection.classList.remove("hidden");
+            resultsLoader.classList.remove("hidden");
+            resultsContent.classList.add("hidden");
+            
+            // Hide all result cards
+            stationaryResultsContainer.classList.add("hidden");
+            arimaResultsContainer.classList.add("hidden");
+            decompositionContainer.classList.add("hidden"); 
+            finalSummaryContainer.classList.add("hidden"); // NEW
 
             try {
                 const response = await fetch(`${API_URL}/analyze`, {
                     method: "POST",
                     body: formData,
                 });
-
                 const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || "Failed to analyze data.");
-                }
-                
+                if (!response.ok) throw new Error(data.error || "Failed to analyze data.");
                 displayResults(data);
+                resultsLoader.classList.add("hidden");
                 resultsContent.classList.remove("hidden");
-
             } catch (error) {
+                console.error("Error analyzing data:", error);
                 showAnalyzeError(error.message);
+                resultsLoader.classList.add("hidden");
             } finally {
                 showAnalyzeLoader(false);
             }
@@ -293,96 +571,142 @@
 
         // --- Helper Function: Display Results ---
         function displayResults(data) {
-            // Original Data
+            // --- 1. Original Data ---
             const orig = data.original_data;
+            const origTest = orig.stationarity_test;
             originalMean.textContent = parseFloat(orig.mean).toFixed(4);
             originalVariance.textContent = parseFloat(orig.variance).toFixed(4);
-            originalPlot.src = `data:image/png;base64,${orig.plot_base64}`;
-            
-            const origTest = orig.stationarity_test;
-            if (origTest.is_stationary) {
-                originalStationarity.textContent = "Stationary";
-                originalStationarity.className = "text-2xl font-bold text-green-700";
-                originalStationarityBox.className = "p-4 rounded-lg bg-green-50";
+            originalPlot.src = "data:image/png;base64," + orig.plot_base64;
+            if(orig.lag_plot_base64) {
+                lagPlot.src = "data:image/png;base64," + orig.lag_plot_base64;
+                lagPlotContainer.classList.remove("hidden");
             } else {
-                originalStationarity.textContent = "Non-Stationary";
-                originalStationarity.className = "text-2xl font-bold text-red-700";
-                originalStationarityBox.className = "p-4 rounded-lg bg-red-50";
+                lagPlotContainer.classList.add("hidden");
+            }
+            if(orig.rolling_stats_plot_base64) {
+                rollingStatsPlot.src = "data:image/png;base64," + orig.rolling_stats_plot_base64;
+                rollingStatsContainer.classList.remove("hidden");
+            } else {
+                rollingStatsContainer.classList.add("hidden");
+            }
+            if (origTest.is_stationary) {
+                originalStationary.textContent = "Yes";
+                originalStationary.className = "font-bold text-green-400";
+            } else {
+                originalStationary.textContent = "No";
+                originalStationary.className = "font-bold text-red-400";
             }
             originalPValue.textContent = `(p-value: ${parseFloat(origTest.p_value).toFixed(4)})`;
+            
+            // --- 2. Decomposition Data ---
+            const decomp = data.decomposition_results;
+            if (decomp && !decomp.error) {
+                decompositionPlot.src = "data:image/png;base64," + decomp.plot_base64;
+                decompositionContainer.classList.remove("hidden");
+            } else {
+                decompositionContainer.classList.add("hidden");
+                if(decomp) console.error("Decomposition Error:", decomp.error);
+            }
 
-            // Stationary Data
+            // --- 3. Stationary Data ---
             const stat = data.stationary_results;
             if (stat && !stat.error) {
+                const statTest = stat.stationarity_test;
+                stationaryMethod.textContent = `Transformed using: ${stat.method}`;
                 stationaryMean.textContent = parseFloat(stat.mean).toFixed(4);
                 stationaryVariance.textContent = parseFloat(stat.variance).toFixed(4);
-                stationaryPlot.src = `data:image/png;base64,${stat.plot_base64}`;
-
-                const statTest = stat.stationarity_test;
+                stationaryPlot.src = "data:image/png;base64," + stat.plot_base64;
                 if (statTest.is_stationary) {
-                    stationaryStationarity.textContent = "Stationary";
-                    stationaryStationarity.className = "text-2xl font-bold text-green-700";
-                    stationaryStationarityBox.className = "p-4 rounded-lg bg-green-50";
+                    stationaryStationary.textContent = "Yes";
+                    stationaryStationary.className = "font-bold text-green-400";
                 } else {
-                    stationaryStationarity.textContent = "Non-Stationary";
-                    stationaryStationarity.className = "text-2xl font-bold text-red-700";
-                    stationaryStationarityBox.className = "p-4 rounded-lg bg-red-50";
+                    stationaryStationary.textContent = "No";
+                    stationaryStationary.className = "font-bold text-red-400";
                 }
                 stationaryPValue.textContent = `(p-value: ${parseFloat(statTest.p_value).toFixed(4)})`;
-
                 stationaryResultsContainer.classList.remove("hidden");
             } else {
                 stationaryResultsContainer.classList.add("hidden");
+            }
+            
+            // --- 4. Auto-ARIMA Data ---
+            const arima = data.arima_results;
+            if (arima && !arima.error) {
+                arimaPreprocessingMsg.textContent = arima.preprocessing_message || '';
+                arimaLogMsg.textContent = arima.log_transformed_message || '';
+                acfPlot.src = "data:image/png;base64," + arima.acf_plot_base64;
+                pacfPlot.src = "data:image/png;base64," + arima.pacf_plot_base64;
+                forecastPlot.src = "data:image/png;base64," + arima.forecast_plot_base64;
+                residualPlot.src = "data:image/png;base64," + arima.residual_plot_base64;
+                residualAcfPlot.src = "data:image/png;base64," + arima.residual_acf_plot_base64;
+                arimaRmse.textContent = parseFloat(arima.rmse).toFixed(4);
+                arimaMae.textContent = parseFloat(arima.mae).toFixed(4);
+                arimaResultsContainer.classList.remove("hidden");
+            } else {
+                arimaResultsContainer.classList.add("hidden");
+                if (arima && arima.error) console.error("ARIMA Error:", arima.error);
+            }
+            
+            // --- 5. NEW: Final Summary ---
+            const summary = data.final_summary;
+            if (summary && !summary.error) {
+                summaryTitle.textContent = summary.title;
+                summaryRecommendation.innerHTML = summary.recommendation; // Use innerHTML to render <strong>
+                summaryNextSteps.innerHTML = summary.next_steps; // Use innerHTML to render <strong>
+                finalSummaryContainer.classList.remove("hidden");
+            } else {
+                finalSummaryContainer.classList.add("hidden");
+                if (summary) console.error("Summary Error:", summary.error);
             }
         }
 
         // --- Helper Function: Populate Select ---
         function populateSelect(selectElement, columns) {
-            selectElement.innerHTML = ""; // Clear old options
-            
-            // Add a default placeholder
-            const placeholder = document.createElement("option");
-            placeholder.value = "";
-            placeholder.textContent = "-- Select a column --";
-            placeholder.disabled = true;
-            placeholder.selected = true;
-            selectElement.appendChild(placeholder);
-
-            columns.forEach(column => {
+            selectElement.innerHTML = '<option value="">Select a column...</option>';
+            columns.forEach(col => {
                 const option = document.createElement("option");
-                option.value = column;
-                option.textContent = column;
+                option.value = col;
+                option.textContent = col;
                 selectElement.appendChild(option);
             });
         }
         
         // --- UI Helpers ---
         function showUploadLoader(isLoading) {
-            uploadLoader.classList.toggle("hidden", !isLoading);
+            if (isLoading) {
+                uploadLoader.classList.remove("hidden");
+                uploadBtnText.textContent = "Inspecting...";
+            } else {
+                uploadLoader.classList.add("hidden");
+                uploadBtnText.textContent = "Inspect File";
+            }
         }
-        
         function showUploadError(message) {
             if (message) {
-                uploadError.textContent = message;
+                uploadErrorMsg.textContent = message;
                 uploadError.classList.remove("hidden");
             } else {
                 uploadError.classList.add("hidden");
             }
         }
-        
         function showAnalyzeLoader(isLoading) {
-            analyzeLoader.classList.toggle("hidden", !isLoading);
+            if (isLoading) {
+                analyzeLoader.classList.remove("hidden");
+                analyzeBtnText.textContent = "Analyzing...";
+            } else {
+                analyzeLoader.classList.add("hidden");
+                analyzeBtnText.textContent = "Start Analysis";
+            }
         }
-
         function showAnalyzeError(message) {
             if (message) {
-                analyzeErrorMessage.textContent = message;
+                analyzeErrorMsg.textContent = message;
                 analyzeError.classList.remove("hidden");
             } else {
                 analyzeError.classList.add("hidden");
             }
         }
-
     </script>
 </body>
 </html>
+
