@@ -98,7 +98,7 @@ def create_rolling_stats_plot(series: pd.Series) -> str:
         print(f"Error creating rolling stats plot: {e}")
         return None
 
-def create_decomposition_plot(result: 'DecomposeResult') -> str:
+def create_decomposition_plot(result: 'DecomposeResult') -> str: # type: ignore
     """Generates a 4-panel decomposition plot."""
     try:
         fig = plt.figure(figsize=(10, 12))
@@ -405,19 +405,19 @@ def generate_final_summary(stationarity_test, decomposition_results, arima_resul
         if is_stationary:
             # Case 1: Stationary Data
             title = "Recommendation: Use ARMA Model"
-            recommendation = "The ADF test suggests your data is already **stationary (d=0)**. A simpler ARMA(p,q) model is likely sufficient. The 'differencing' step (d=1) in our trial model may be unnecessary."
-            next_steps = "Look at the **ACF and PACF plots** of the *original* data (not shown) to determine the 'p' and 'q' orders for an ARMA model."
+            recommendation = "The ADF test suggests your data is already [ stationary (d=0) ]. A simpler ARMA(p,q) model is likely sufficient. The 'differencing' step (d=1) in our trial model may be unnecessary."
+            next_steps = "Look at the [ ACF and PACF plots ] of the original data (not shown) to determine the 'p' and 'q' orders for an ARMA model."
         
         elif not is_stationary and is_decomposed:
             # Case 2: Non-Stationary with Seasonality (requires datetime index)
             title = "Recommendation: Use SARIMA Model"
             recommendation = (
-                "The ADF test shows your data is **non-stationary (d>0)**. "
-                "More importantly, the Seasonal Decomposition plot shows a clear **seasonal pattern** "
+                "The ADF test shows your data is [ non-stationary (d>0) ]. "
+                "More importantly, the Seasonal Decomposition plot shows a clear [ seasonal pattern ] "
                 f"(with a period of {decomposition_results.get('period', 'N/A')}). This means a simple ARIMA model is not the best fit."
             )
             next_steps = (
-                "The **best case** for this data is likely a **SARIMA(p,d,q)(P,D,Q)m model**. "
+                "The [ best case ] for this data is likely a [ SARIMA(p,d,q)(P,D,Q)m model ]. "
                 "Use the ACF/PACF plots to find (p,q) and the seasonal (P,Q) parameters. "
                 "The 'm' parameter would be {decomposition_results.get('period', 'N/A')}."
             )
@@ -426,13 +426,13 @@ def generate_final_summary(stationarity_test, decomposition_results, arima_resul
             # Case 3: Non-Stationary, No Seasonality (or non-datetime index)
             title = "Recommendation: Tune ARIMA(p,d,q) Model"
             recommendation = (
-                "The ADF test shows your data is **non-stationary (d>0)**. "
+                "The ADF test shows your data is [ non-stationary (d>0) ]. "
                 "The decomposition plot was skipped (likely due to a non-datetime index or short series), "
                 "so a standard ARIMA model is the correct approach."
             )
             if has_arima_residuals:
                 next_steps = (
-                    "Our **ARIMA(1,1,1) trial** is a good starting point. Now, look at the **ACF/PACF plots** to find better 'p' and 'q' values. "
+                    "Our [ ARIMA(1,1,1) trial ] is a good starting point. Now, look at the [ ACF/PACF plots ] to find better 'p' and 'q' values. "
                     "Check the 'Residual ACF Plot': if there are still large spikes, it means the (1,1,1) model is not perfect and can be improved by tuning 'p' or 'q'."
                 )
             else:
@@ -464,6 +464,7 @@ def inspect_csv():
         return jsonify({"error": "No selected file"}), 400
 
     try:
+        # We read 5 rows for inspection
         df = pd.read_csv(file, nrows=5)
         return jsonify({
             "filename": file.filename,
@@ -480,19 +481,34 @@ def analyze_time_series():
     file = request.files['file']
     date_column = request.form.get('date_column')
     value_column = request.form.get('value_column')
+    nrows = request.form.get('nrows') # NEW
 
     if not date_column or not value_column:
         return jsonify({"error": "Missing date_column or value_column"}), 400
 
+    # --- NEW: Parse nrows ---
+    nrows_to_read = None
+    if nrows:
+        try:
+            nrows_to_read = int(nrows)
+            if nrows_to_read <= 0:
+                nrows_to_read = None
+        except ValueError:
+            nrows_to_read = None
+    # --- END NEW ---
+
     try:
         # We need to read the file into memory to use file.seek(0) later
         file_buffer = io.BytesIO(file.read())
-        df = pd.read_csv(file_buffer)
+        # --- MODIFIED: Use nrows_to_read ---
+        df = pd.read_csv(file_buffer, nrows=nrows_to_read)
     except Exception as e:
         return jsonify({"error": f"Error reading CSV file: {e}"}), 400
 
     if date_column not in df.columns or value_column not in df.columns:
         return jsonify({"error": f"One or both columns ('{date_column}', '{value_column}') not found."}), 404
+        
+    original_rows = len(df) # NEW: Original rows is the number we just read
 
     try:
         # --- NEW CLEANING LOGIC ---
@@ -513,19 +529,20 @@ def analyze_time_series():
             
             # Reread the file to get the original string dates
             file_buffer.seek(0)
-            df = pd.read_csv(file_buffer)
+            # --- MODIFIED: Use nrows_to_read ---
+            df = pd.read_csv(file_buffer, nrows=nrows_to_read)
             
             # Just clean the value column again
             df[value_column] = df[value_column].astype(str).str.replace(r"[^\d\.\-]", "", regex=True)
             df[value_column] = pd.to_numeric(df[value_column], errors='coerce')
             
-            original_rows = len(df)
+            # original_rows = len(df) # Already set
             df.dropna(subset=[value_column], inplace=True) # Only drop if value is bad
             cleaned_rows = len(df)
         else:
             print("Info: Date conversion successful.")
             is_datetime_index = True
-            original_rows = len(df)
+            # original_rows = len(df) # Already set
             df.dropna(subset=[date_column, value_column], inplace=True)
             cleaned_rows = len(df)
         
@@ -645,7 +662,8 @@ def analyze_time_series():
             "date_column": date_column,
             "value_column": value_column,
             "data_cleaning": {
-                "original_rows": int(original_rows),
+                "rows_read": nrows_to_read if nrows_to_read else "all", # NEW
+                "original_rows": int(original_rows), # Renamed for clarity
                 "cleaned_rows": int(cleaned_rows),
                 "rows_dropped": int(original_rows - cleaned_rows)
             }
@@ -668,7 +686,5 @@ def analyze_time_series():
     return jsonify(response_data)
 
 
-# This block allows you to run the app directly with `python app.py`
 if __name__ == "__main__":
     app.run(debug=True)
-

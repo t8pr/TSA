@@ -118,9 +118,6 @@
             <h1 class="text-5xl font-extrabold text-white">
                 Time Series <span class="gradient-text">Analyzer</span>
             </h1>
-            <p class="text-xl text-gray-400 mt-4">
-                Your AI-powered assistant for statistical analysis.
-            </p>
         </div>
 
         <!-- Error Banners -->
@@ -156,11 +153,9 @@
                     </div>
                 </label>
                 
-                <button type="submit"
+                <button style="background: #3b82f6;" type="submit"
                         class="mt-6 w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 
                                font-semibold rounded-lg shadow-sm text-white 
-                               bg-gradient-to-r from-blue-600 to-purple-600
-                               hover:from-blue-700 hover:to-purple-700 
                                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
                                focus:ring-offset-gray-900 transition duration-300 ease-in-out">
                     <div id="upload-loader" class="loader hidden mr-2"></div>
@@ -200,11 +195,21 @@
                         </select>
                     </div>
                 </div>
-                <button type="submit"
+                
+                <!-- NEW: Number of Rows Input -->
+                <div class="mt-6">
+                    <label for="nrows-input" class="block text-sm font-medium text-gray-400 mb-1">Number of Rows to Analyze (optional)</label>
+                    <input type="number" id="nrows-input" name="nrows"
+                           class="mt-1 block w-full pl-3 pr-3 py-3 text-base text-white bg-gray-700 
+                                  border-gray-600 focus:outline-none focus:ring-blue-500 
+                                  focus:border-blue-500 sm:text-sm rounded-lg shadow-sm"
+                           placeholder="Leave blank to read all rows">
+                    <p class="text-xs text-gray-500 mt-1">Specify how many rows to read from the top of the file. Good for very large files.</p>
+                </div>
+                
+                <button style="background-color: #008e29;" type="submit"
                         class="mt-8 w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 
                                font-semibold rounded-lg shadow-sm text-white 
-                               bg-gradient-to-r from-green-500 to-teal-500 
-                               hover:from-green-600 hover:to-teal-600 
                                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 
                                focus:ring-offset-gray-900 transition duration-300 ease-in-out">
                     <div id="analyze-loader" class="loader hidden mr-2"></div>
@@ -226,6 +231,30 @@
                 <div class="text-center">
                     <h2 class="text-4xl font-extrabold text-white">Analysis <span class="gradient-text">Results</span></h2>
                 </div>
+                
+                <!-- NEW: Data Cleaning Summary Card -->
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+                    <h3 class="text-2xl font-semibold text-white mb-4">Analysis Summary</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-sm font-medium text-gray-400">File</h4>
+                            <p id="summary-filename" class="text-lg text-white font-semibold truncate"></p>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-sm font-medium text-gray-400">Columns</h4>
+                            <p class="text-lg text-white font-semibold"><span id="summary-date-col"></span> (Date) &rarr; <span id="summary-value-col"></span> (Value)</p>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-sm font-medium text-gray-400">Rows Read</h4>
+                            <p id="summary-rows-read" class="text-lg text-white font-semibold"></p>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded-lg">
+                            <h4 class="text-sm font-medium text-gray-400">Rows Cleaned/Dropped</h4>
+                            <p class="text-lg text-white font-semibold"><span id="summary-rows-cleaned"></span> / <span id="summary-rows-dropped" class="text-red-400"></span></p>
+                        </div>
+                    </div>
+                </div>
+
 
                 <!-- Result Card: Original Data -->
                 <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
@@ -410,12 +439,21 @@
         const analyzeForm = document.getElementById("analyze-form");
         const dateColumnSelect = document.getElementById("date-column-select");
         const valueColumnSelect = document.getElementById("value-column-select");
+        const nrowsInput = document.getElementById("nrows-input"); // NEW
         const analyzeLoader = document.getElementById("analyze-loader");
         const analyzeBtnText = document.getElementById("analyze-btn-text");
         const analyzeError = document.getElementById("analyze-error");
         const analyzeErrorMsg = document.getElementById("analyze-error-msg");
         const resultsLoader = document.getElementById("results-loader");
         const resultsContent = document.getElementById("results-content");
+        
+        // --- Result Fields (Summary) ---
+        const summaryFilename = document.getElementById("summary-filename");
+        const summaryDateCol = document.getElementById("summary-date-col");
+        const summaryValueCol = document.getElementById("summary-value-col");
+        const summaryRowsRead = document.getElementById("summary-rows-read");
+        const summaryRowsCleaned = document.getElementById("summary-rows-cleaned");
+        const summaryRowsDropped = document.getElementById("summary-rows-dropped");
 
         // --- Result Fields (Base) ---
         const originalMean = document.getElementById("original-mean");
@@ -530,6 +568,8 @@
             showAnalyzeError(null);
             const dateColumn = dateColumnSelect.value;
             const valueColumn = valueColumnSelect.value;
+            const nrows = nrowsInput.value; // NEW
+            
             if (!dateColumn || !valueColumn) {
                 showAnalyzeError("Please select both a date column and a value column.");
                 return;
@@ -542,6 +582,9 @@
             formData.append("file", uploadedFile);
             formData.append("date_column", dateColumn);
             formData.append("value_column", valueColumn);
+            if (nrows) { // NEW
+                formData.append("nrows", nrows);
+            }
             
             showAnalyzeLoader(true);
             resultsSection.classList.remove("hidden");
@@ -575,6 +618,15 @@
 
         // --- Helper Function: Display Results ---
         function displayResults(data) {
+            // --- 0. Analysis Summary ---
+            const summary = data.analysis_summary;
+            summaryFilename.textContent = summary.filename;
+            summaryDateCol.textContent = summary.date_column;
+            summaryValueCol.textContent = summary.value_column;
+            summaryRowsRead.textContent = summary.data_cleaning.rows_read;
+            summaryRowsCleaned.textContent = summary.data_cleaning.cleaned_rows;
+            summaryRowsDropped.textContent = `-${summary.data_cleaning.rows_dropped}`;
+        
             // --- 1. Original Data ---
             const orig = data.original_data;
             const origTest = orig.stationarity_test;
@@ -652,15 +704,15 @@
             }
             
             // --- 5. NEW: Final Summary ---
-            const summary = data.final_summary;
-            if (summary && !summary.error) {
-                summaryTitle.textContent = summary.title;
-                summaryRecommendation.innerHTML = summary.recommendation; // Use innerHTML to render <strong>
-                summaryNextSteps.innerHTML = summary.next_steps; // Use innerHTML to render <strong>
+            const final = data.final_summary;
+            if (final && !final.error) {
+                summaryTitle.textContent = final.title;
+                summaryRecommendation.innerHTML = final.recommendation; // Use innerHTML to render <strong>
+                summaryNextSteps.innerHTML = final.next_steps; // Use innerHTML to render <strong>
                 finalSummaryContainer.classList.remove("hidden");
             } else {
                 finalSummaryContainer.classList.add("hidden");
-                if (summary) console.error("Summary Error:", summary.error);
+                if (final) console.error("Summary Error:", final.error);
             }
         }
 
@@ -713,4 +765,3 @@
     </script>
 </body>
 </html>
-
