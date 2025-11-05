@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time Series Analyzer</title>
-    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Add Inter font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,12 +17,10 @@
             color: #d1d5db; /* Light text */
         }
         
-        /* Gradient text (now solid blue) */
         .gradient-text {
             color: #60a5fa; /* tailwind-blue-400 */
         }
 
-        /* Custom file upload area */
         .file-drop-area {
             transition: all 0.3s ease;
         }
@@ -33,7 +29,6 @@
             background-color: #1f2937; /* Darker gray */
         }
         
-        /* Custom loader */
         .loader {
             width: 20px;
             height: 20px;
@@ -56,7 +51,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Custom select and input for dark mode */
         select,
         input[type="number"] {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -69,19 +63,29 @@
         }
         
         input[type="number"] {
-            background-image: none; /* Remove arrow from number input */
-            -moz-appearance: textfield; /* Firefox */
+            background-image: none;
+            -moz-appearance: textfield;
         }
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
             margin: 0; 
         }
+
+        /* NEW: Custom checkbox style */
+        input[type="checkbox"] {
+            background-image: none;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 1.0em 1.0em;
+        }
+        input[type="checkbox"]:checked {
+             background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+        }
     </style>
 </head>
 <body class="bg-gray-900 font-sans leading-normal tracking-normal text-gray-300">
 
-    <!-- Icons -->
     <svg width="0" height="0" class="absolute">
       <defs>
         <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -100,7 +104,6 @@
             <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
             <polyline points="17 6 23 6 23 12"></polyline>
         </symbol>
-        <!-- NEW ICON for summary -->
         <symbol id="icon-brain" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 9.5 7v0A2.5 2.5 0 0 1 7 9.5v0A2.5 2.5 0 0 1 9.5 12v0A2.5 2.5 0 0 1 7 14.5v0A2.5 2.5 0 0 1 9.5 17v0A2.5 2.5 0 0 1 7 19.5v0A2.5 2.5 0 0 1 9.5 22M14.5 2a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5"/>
             <path d="M2 12h5.5"/>
@@ -113,14 +116,12 @@
 
     <div class="container max-w-5xl mx-auto p-4 sm:p-8">
         
-        <!-- Header -->
         <div class="text-center mb-10">
             <h1 class="text-5xl font-extrabold text-white">
                 Time Series <span class="gradient-text">Analyzer</span>
             </h1>
         </div>
 
-        <!-- Error Banners -->
         <div id="upload-error" class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative mb-6 hidden" role="alert">
             <strong class="font-bold">Error!</strong>
             <span class="block sm:inline" id="upload-error-msg"></span>
@@ -130,7 +131,6 @@
             <span class="block sm:inline" id="analyze-error-msg"></span>
         </div>
 
-        <!-- Step 1: Upload Section -->
         <div id="upload-section" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
             <h2 class="text-2xl font-semibold text-white mb-5 flex items-center">
                 <span class="bg-blue-600 rounded-full w-8 h-8 text-white font-bold flex items-center justify-center mr-3">1</span>
@@ -142,11 +142,7 @@
                        class="file-drop-area relative block w-full border-2 border-dashed border-gray-600 rounded-lg p-10 text-center cursor-pointer hover:border-blue-500 hover:bg-gray-700/50">
                     <div class="flex flex-col items-center justify-center">
                         <svg class="w-12 h-12 text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><use href="#icon-upload"></use></svg>
-                        <p style="    display: flex
-;
-    flex-direction: column;
-    align-items: center;
-" class="text-lg font-medium text-gray-300" id="file-drop-text">
+                        <p style="display: flex; flex-direction: column; align-items: center;" class="text-lg font-medium text-gray-300" id="file-drop-text">
                             Drag & drop your CSV file here
                         </p>
                         <p class="text-sm text-gray-500">or click to browse</p>
@@ -165,7 +161,6 @@
             </form>
         </div>
 
-        <!-- Step 2: Column Selection Section -->
         <div id="selection-section" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 mt-8 hidden">
             <h2 class="text-2xl font-semibold text-white mb-5 flex items-center">
                 <span class="bg-green-600 rounded-full w-8 h-8 text-white font-bold flex items-center justify-center mr-3">2</span>
@@ -174,29 +169,24 @@
             <p class="text-base text-gray-400 mb-6">Select your data columns to analyze.</p>
             <form id="analyze-form">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Date Column -->
                     <div>
                         <label for="date-column-select" class="block text-sm font-medium text-gray-400 mb-1">Date/Time Column</label>
                         <select id="date-column-select" name="date_column"
                                 class="mt-1 block w-full pl-3 pr-10 py-3 text-base text-white bg-gray-700 
                                        border-gray-600 focus:outline-none focus:ring-blue-500 
                                        focus:border-blue-500 sm:text-sm rounded-lg shadow-sm">
-                            <!-- Options will be populated by JS -->
-                        </select>
+                            </select>
                     </div>
-                    <!-- Value Column -->
                     <div>
                         <label for="value-column-select" class="block text-sm font-medium text-gray-400 mb-1">Value Column (to Analyze)</label>
                         <select id="value-column-select" name="value_column"
                                 class="mt-1 block w-full pl-3 pr-10 py-3 text-base text-white bg-gray-700 
                                        border-gray-600 focus:outline-none focus:ring-blue-500 
                                        focus:border-blue-500 sm:text-sm rounded-lg shadow-sm">
-                            <!-- Options will be populated by JS -->
-                        </select>
+                            </select>
                     </div>
                 </div>
                 
-                <!-- NEW: Number of Rows Input -->
                 <div class="mt-6">
                     <label for="nrows-input" class="block text-sm font-medium text-gray-400 mb-1">Number of Rows to Analyze (optional)</label>
                     <input type="number" id="nrows-input" name="nrows"
@@ -206,7 +196,20 @@
                            placeholder="Leave blank to read all rows">
                     <p class="text-xs text-gray-500 mt-1">Specify how many rows to read from the top of the file. Good for very large files.</p>
                 </div>
-                
+
+                <div class="mt-6">
+                    <label for="auto-tune-checkbox" class="flex items-center cursor-pointer">
+                        <input id="auto-tune-checkbox" name="auto_tune" value="true" type="checkbox"
+                               class="h-5 w-5 rounded border-gray-500 bg-gray-700 text-blue-600 
+                                      focus:ring-blue-500 focus:ring-offset-gray-800">
+                        <span class="ml-3 text-sm font-medium text-gray-200">
+                            Find best model (simple search)
+                        </span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1 ml-8">
+                        Tests common models to find a better (p,d,q) fit. Slower, but more accurate.
+                    </p>
+                </div>
                 <button style="background-color: #008e29;" type="submit"
                         class="mt-8 w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 
                                font-semibold rounded-lg shadow-sm text-white 
@@ -219,20 +222,16 @@
             </form>
         </div>
         
-        <!-- Step 3: Results Section -->
         <div id="results-section" class="mt-8 hidden">
-            <!-- Loader for results -->
             <div id="results-loader" class="flex justify-center items-center h-40">
                 <div class="section-loader"></div>
             </div>
             
-            <!-- Content for results -->
             <div id="results-content" class="hidden space-y-8">
                 <div class="text-center">
                     <h2 class="text-4xl font-extrabold text-white">Analysis <span class="gradient-text">Results</span></h2>
                 </div>
                 
-                <!-- NEW: Data Cleaning Summary Card -->
                 <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
                     <h3 class="text-2xl font-semibold text-white mb-4">Analysis Summary</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -255,13 +254,10 @@
                     </div>
                 </div>
 
-
-                <!-- Result Card: Original Data -->
                 <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
                     <h3 class="text-2xl font-semibold text-white mb-5">Original Data</h3>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <!-- Stats -->
                         <div class="bg-gray-900 p-4 rounded-lg">
                             <h4 class="text-lg font-medium text-gray-200">Base Statistics</h4>
                             <ul class="mt-3 text-gray-300 space-y-2">
@@ -269,7 +265,6 @@
                                 <li><strong>Variance:</strong> <span id="original-variance" class="text-white font-semibold"></span></li>
                             </ul>
                         </div>
-                        <!-- Stationarity -->
                         <div class="bg-gray-900 p-4 rounded-lg">
                             <h4 class="text-lg font-medium text-gray-200">Stationarity Test (ADF)</h4>
                             <ul class="mt-3 text-gray-300 space-y-2">
@@ -302,7 +297,6 @@
                     </div>
                 </div>
 
-                <!-- Result Card: Seasonal Decomposition -->
                 <div id="decomposition-container" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 hidden">
                     <h3 class="text-2xl font-semibold text-white mb-4">Seasonal Decomposition</h3>
                     <p class="text-sm text-gray-400 mb-5">
@@ -313,13 +307,11 @@
                     </div>
                 </div>
 
-                <!-- Result Card: Stationary Data -->
                 <div id="stationary-results-container" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 hidden">
                     <h3 class="text-2xl font-semibold text-white mb-4">Transformed (Stationary) Data</h3>
                     <p id="stationary-method" class="text-blue-400 mb-5 font-medium"></p>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <!-- Stats -->
                         <div class="bg-gray-900 p-4 rounded-lg">
                             <h4 class="text-lg font-medium text-gray-200">New Statistics</h4>
                             <ul class="mt-3 text-gray-300 space-y-2">
@@ -327,7 +319,6 @@
                                 <li><strong>Variance:</strong> <span id="stationary-variance" class="text-white font-semibold"></span></li>
                             </ul>
                         </div>
-                        <!-- Stationarity -->
                         <div class="bg-gray-900 p-4 rounded-lg">
                             <h4 class="text-lg font-medium text-gray-200">New Stationarity Test (ADF)</h4>
                             <ul class="mt-3 text-gray-300 space-y-2">
@@ -343,9 +334,8 @@
                     </div>
                 </div>
                 
-                <!-- Result Card: ARIMA -->
                 <div id="arima-results-container" class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700 hidden">
-                    <h3 class="text-2xl font-semibold text-white mb-4">ARIMA(1,1,1) Trial Model</h3>
+                    <h3 id="arima-title" class="text-2xl font-semibold text-white mb-4">ARIMA Trial Model</h3>
                     
                     <p class="text-sm text-gray-400 mb-2" id="arima-preprocessing-msg"></p>
                     <p class="text-sm text-gray-400 mb-5" id="arima-log-msg"></p>
@@ -390,7 +380,6 @@
                     </div>
                 </div>
                 
-                <!-- NEW: Result Card: Final Summary -->
                 <div id="final-summary-container" class="bg-gray-800 rounded-2xl shadow-lg border border-blue-600/50 hidden">
                     <div class="p-6">
                         <div class="flex items-center">
@@ -439,7 +428,8 @@
         const analyzeForm = document.getElementById("analyze-form");
         const dateColumnSelect = document.getElementById("date-column-select");
         const valueColumnSelect = document.getElementById("value-column-select");
-        const nrowsInput = document.getElementById("nrows-input"); // NEW
+        const nrowsInput = document.getElementById("nrows-input");
+        const autoTuneCheckbox = document.getElementById("auto-tune-checkbox"); // NEW
         const analyzeLoader = document.getElementById("analyze-loader");
         const analyzeBtnText = document.getElementById("analyze-btn-text");
         const analyzeError = document.getElementById("analyze-error");
@@ -481,6 +471,7 @@
 
         // --- Result Fields (ARIMA) ---
         const arimaResultsContainer = document.getElementById("arima-results-container");
+        const arimaTitle = document.getElementById("arima-title"); // NEW
         const arimaPreprocessingMsg = document.getElementById("arima-preprocessing-msg");
         const arimaLogMsg = document.getElementById("arima-log-msg");
         const acfPlot = document.getElementById("acf-plot");
@@ -491,7 +482,7 @@
         const residualPlot = document.getElementById("residual-plot");
         const residualAcfPlot = document.getElementById("residual-acf-plot");
 
-        // --- NEW: Result Fields (Final Summary) ---
+        // --- Result Fields (Final Summary) ---
         const finalSummaryContainer = document.getElementById("final-summary-container");
         const summaryTitle = document.getElementById("summary-title");
         const summaryRecommendation = document.getElementById("summary-recommendation");
@@ -568,7 +559,8 @@
             showAnalyzeError(null);
             const dateColumn = dateColumnSelect.value;
             const valueColumn = valueColumnSelect.value;
-            const nrows = nrowsInput.value; // NEW
+            const nrows = nrowsInput.value;
+            const autoTune = autoTuneCheckbox.checked; // NEW: Get checkbox state
             
             if (!dateColumn || !valueColumn) {
                 showAnalyzeError("Please select both a date column and a value column.");
@@ -582,8 +574,11 @@
             formData.append("file", uploadedFile);
             formData.append("date_column", dateColumn);
             formData.append("value_column", valueColumn);
-            if (nrows) { // NEW
+            if (nrows) {
                 formData.append("nrows", nrows);
+            }
+            if (autoTune) { // NEW: Add to form data if checked
+                formData.append("auto_tune", "true");
             }
             
             showAnalyzeLoader(true);
@@ -595,7 +590,7 @@
             stationaryResultsContainer.classList.add("hidden");
             arimaResultsContainer.classList.add("hidden");
             decompositionContainer.classList.add("hidden"); 
-            finalSummaryContainer.classList.add("hidden"); // NEW
+            finalSummaryContainer.classList.add("hidden");
 
             try {
                 const response = await fetch(`${API_URL}/analyze`, {
@@ -688,6 +683,9 @@
             // --- 4. Auto-ARIMA Data ---
             const arima = data.arima_results;
             if (arima && !arima.error) {
+                // *** NEW: Update Title ***
+                arimaTitle.textContent = `${arima.model_order || 'ARIMA'} Trial Model`;
+                
                 arimaPreprocessingMsg.textContent = arima.preprocessing_message || '';
                 arimaLogMsg.textContent = arima.log_transformed_message || '';
                 acfPlot.src = "data:image/png;base64," + arima.acf_plot_base64;
@@ -703,7 +701,7 @@
                 if (arima && arima.error) console.error("ARIMA Error:", arima.error);
             }
             
-            // --- 5. NEW: Final Summary ---
+            // --- 5. Final Summary ---
             const final = data.final_summary;
             if (final && !final.error) {
                 summaryTitle.textContent = final.title;

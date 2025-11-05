@@ -7,11 +7,12 @@ from flask_cors import CORS
 from statsmodels.tsa.stattools import adfuller
 from pandas.plotting import lag_plot
 import numpy as np
-import re # Import regular expressions for cleaning
+import re
+import warnings # NEW: Import warnings
 
 # --- IMPORTS ---
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA # CHANGED: We use this
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from math import sqrt
 from statsmodels.tsa.seasonal import seasonal_decompose
@@ -207,7 +208,6 @@ def create_forecast_plot(train: pd.Series, test: pd.Series, forecast: pd.Series)
     """Generates a plot showing train, test, and forecast data."""
     try:
         plt.figure(figsize=(12, 7))
-        # Check if index is numeric (for non-datetime)
         is_numeric_index = pd.api.types.is_numeric_dtype(train.index)
         
         if is_numeric_index:
@@ -215,12 +215,10 @@ def create_forecast_plot(train: pd.Series, test: pd.Series, forecast: pd.Series)
             test.plot(label='Test (Actual)', color='orange')
             forecast.plot(label='Forecast', color='green', linestyle='--')
         else:
-            # Handle plotting for string indexes like "Jan", "Feb"
             plt.plot(range(len(train)), train.values, label='Train')
             plt.plot(range(len(train), len(train) + len(test)), test.values, label='Test (Actual)', color='orange')
             plt.plot(range(len(train), len(train) + len(test)), forecast.values, label='Forecast', color='green', linestyle='--')
             
-            # Create cleaner labels for non-datetime index
             combined_index = train.index.to_list() + test.index.to_list()
             tick_positions = np.linspace(0, len(combined_index) - 1, num=10, dtype=int)
             plt.xticks(ticks=tick_positions, labels=[combined_index[i] for i in tick_positions], rotation=45)
@@ -299,14 +297,60 @@ def run_decomposition_analysis(ts_interpolated: pd.Series):
         print(f"Error in decomposition: {e}")
         return {"error": str(e), "period": None}
 
-def run_simple_arima_analysis(ts_data: pd.Series, freq: str, is_datetime_index: bool):
+# --- NEW HELPER FUNCTION ---
+def find_best_arima_order(data, d: int) -> (int, int, int):
     """
-    Runs a simple ARIMA(1,1,1) model, performs train/test
+    Runs a small grid search to find the best (p,q)
+    orders for a given d using statsmodels.
+    """
+    print(f"--- Starting simple grid search with d={d} ---")
+    best_aic = float('inf')
+    best_order = (1, d, 1) # Default
+    
+    # Define a small range of p and q values
+    p_values = [0, 1, 2]
+    q_values = [0, 1, 2]
+    
+    # Suppress warnings
+    warnings.filterwarnings("ignore") 
+    
+    for p in p_values:
+        for q in q_values:
+            # Skip (0,d,0) model
+            if p == 0 and q == 0:
+                continue
+                
+            try:
+                # We use the raw .values() to speed up the loop
+                model = ARIMA(data, order=(p, d, q))
+                model_fit = model.fit()
+                
+                if model_fit.aic < best_aic:
+                    best_aic = model_fit.aic
+                    best_order = (p, d, q)
+                    print(f"New best model: ARIMA{best_order} with AIC={best_aic}")
+                    
+            except Exception as e:
+                # Model failed to converge, just skip it
+                print(f"Skipped ARIMA({p},{d},{q})")
+                continue
+                
+    warnings.resetwarnings() # Reset warnings
+    print(f"--- Best model found: ARIMA{best_order} ---")
+    return best_order
+# --- END NEW HELPER FUNCTION ---
+
+# --- MODIFIED ARIMA ANALYSIS FUNCTION ---
+def run_simple_arima_analysis(ts_data: pd.Series, freq: str, is_datetime_index: bool, auto_tune: bool = False):
+    """
+    Runs an ARIMA model, performs train/test
     split, residual analysis, and returns the results.
+    
+    If 'auto_tune' is True, it finds the best (p,d,q) first.
     """
     results = {}
     try:
-        # --- 1. Log Transform (if possible) ---
+        # --- 1. Log Transform ---
         use_log = (ts_data > 0).all()
         if use_log:
             ts_log = np.log(ts_data)
@@ -315,27 +359,19 @@ def run_simple_arima_analysis(ts_data: pd.Series, freq: str, is_datetime_index: 
             ts_log = ts_data
             results['log_transformed_message'] = "Log transform not applied (some values <= 0)."
         
-        # --- 2. Create differenced series for ACF/PACF ---
+        # --- 2. Find 'd' value ---
         d = 1
         adf_test = check_stationarity(ts_log)
         if adf_test.get('is_stationary', False):
             d = 0
             
-        ts_diff = ts_log.diff(periods=d).dropna()
-        
         # NEW: Conditional message
         if is_datetime_index:
-            results['preprocessing_message'] = f"Data interpolated to '{freq}' frequency. Using d={d} for differencing."
+            results['preprocessing_message'] = f"Data interpolated to '{freq}' frequency."
         else:
-            results['preprocessing_message'] = f"Using simple non-datetime index. Using d={d} for differencing. Interpolation skipped."
+            results['preprocessing_message'] = f"Using simple non-datetime index. Interpolation skipped."
         
-        # --- 3. ACF/PACF Plots ---
-        acf_pacf_plots = create_acf_pacf_plots(ts_diff)
-        if 'error' in acf_pacf_plots:
-            raise Exception(acf_pacf_plots['error'])
-        results.update(acf_pacf_plots)
-            
-        # --- 4. Train/Test Split (80/20) ---
+        # --- 3. Train/Test Split (80/20) ---
         split_point = int(len(ts_log) * 0.8)
         train_log = ts_log.iloc[:split_point]
         test_log = ts_log.iloc[split_point:]
@@ -343,26 +379,44 @@ def run_simple_arima_analysis(ts_data: pd.Series, freq: str, is_datetime_index: 
         if len(train_log) < 20 or len(test_log) < 1:
              return {"error": f"Not enough data for ARIMA train/test split."}
 
-        # --- 5. Fit ARIMA(1,1,1) model ---
-        # We pass train_log.values to avoid index issues with non-datetime data
-        model_order = (1, 1, 1)
+        # --- 4. Find Best (p,d,q) Order ---
+        model_order = (1, 1, 1) # Default
+        
+        if auto_tune:
+            # Use our new grid search function ON THE TRAINING DATA
+            model_order = find_best_arima_order(train_log.values, d=d)
+            results['preprocessing_message'] += f" Found best model: ARIMA{model_order}."
+        else:
+            # Use the default based on our 'd'
+            model_order = (1, d, 1)
+            results['preprocessing_message'] += f" Using trial ARIMA(1,{d},1)."
+            
+        results['model_order'] = f"ARIMA{model_order}"
+            
+        # --- 5. Create differenced series for ACF/PACF ---
+        ts_diff = ts_log.diff(periods=d).dropna()
+        acf_pacf_plots = create_acf_pacf_plots(ts_diff)
+        if 'error' in acf_pacf_plots:
+            raise Exception(acf_pacf_plots['error'])
+        results.update(acf_pacf_plots)
+            
+        # --- 6. Fit the *chosen* ARIMA model ---
         model = ARIMA(train_log.values, order=model_order)
         model_fit = model.fit()
 
-        # --- 6. Get Residuals & Plots ---
-        residuals = pd.Series(model_fit.resid) # Residuals won't have a time index
+        # --- 7. Get Residuals & Plots ---
+        residuals = pd.Series(model_fit.resid)
         if not residuals.empty:
             residual_plots = create_residual_plots(residuals)
             results.update(residual_plots)
         else:
             print("Warning: No residuals found.")
 
-        # --- 7. Forecast (on test set) ---
+        # --- 8. Forecast (on test set) ---
         forecast_log_values = model_fit.forecast(steps=len(test_log))
-        # Create a new series with the *test index*
         forecast_log = pd.Series(forecast_log_values, index=test_log.index)
         
-        # --- 8. Inverse Transform (if log was used) ---
+        # --- 9. Inverse Transform ---
         if use_log:
             train_real = np.exp(train_log)
             test_real = np.exp(test_log)
@@ -374,11 +428,11 @@ def run_simple_arima_analysis(ts_data: pd.Series, freq: str, is_datetime_index: 
             
         forecast_real.index = test_real.index
 
-        # --- 9. Calculate Metrics ---
+        # --- 10. Calculate Metrics ---
         results['rmse'] = float(sqrt(mean_squared_error(test_real, forecast_real)))
         results['mae'] = float(mean_absolute_error(test_real, forecast_real))
 
-        # --- 10. Generate Forecast Plot ---
+        # --- 11. Generate Forecast Plot ---
         results['forecast_plot_base64'] = create_forecast_plot(train_real, test_real, forecast_real)
         
         return results
@@ -386,6 +440,8 @@ def run_simple_arima_analysis(ts_data: pd.Series, freq: str, is_datetime_index: 
     except Exception as e:
         print(f"Simple ARIMA analysis failed: {e}")
         return {"error": f"Simple ARIMA analysis failed: {e}"}
+# --- END MODIFIED FUNCTION ---
+
 
 # --- FINAL SUMMARY FUNCTION ---
 def generate_final_summary(stationarity_test, decomposition_results, arima_results):
@@ -398,48 +454,44 @@ def generate_final_summary(stationarity_test, decomposition_results, arima_resul
         next_steps = ""
         
         is_stationary = stationarity_test.get('is_stationary', False)
-        # NEW: Check if decomposition was skipped
         is_decomposed = 'error' not in decomposition_results
         has_arima_residuals = 'error' not in arima_results and 'residual_acf_plot_base64' in arima_results
 
         if is_stationary:
-            # Case 1: Stationary Data
             title = "Recommendation: Use ARMA Model"
-            recommendation = "The ADF test suggests your data is already [ stationary (d=0) ]. A simpler ARMA(p,q) model is likely sufficient. The 'differencing' step (d=1) in our trial model may be unnecessary."
-            next_steps = "Look at the [ ACF and PACF plots ] of the original data (not shown) to determine the 'p' and 'q' orders for an ARMA model."
+            recommendation = "The ADF test suggests your data is already <strong>stationary (d=0)</strong>. A simpler ARMA(p,q) model is likely sufficient. The 'differencing' step (d=1) in our trial model may be unnecessary."
+            next_steps = "Look at the <strong>ACF and PACF plots</strong> of the original data (not shown) to determine the 'p' and 'q' orders for an ARMA model."
         
         elif not is_stationary and is_decomposed:
-            # Case 2: Non-Stationary with Seasonality (requires datetime index)
             title = "Recommendation: Use SARIMA Model"
             recommendation = (
-                "The ADF test shows your data is [ non-stationary (d>0) ]. "
-                "More importantly, the Seasonal Decomposition plot shows a clear [ seasonal pattern ] "
+                "The ADF test shows your data is <strong>non-stationary (d>0)</strong>. "
+                "More importantly, the Seasonal Decomposition plot shows a clear <strong>seasonal pattern</strong> "
                 f"(with a period of {decomposition_results.get('period', 'N/A')}). This means a simple ARIMA model is not the best fit."
             )
             next_steps = (
-                "The [ best case ] for this data is likely a [ SARIMA(p,d,q)(P,D,Q)m model ]. "
+                "The <strong>best case</strong> for this data is likely a <strong>SARIMA(p,d,q)(P,D,Q)m model</strong>. "
                 "Use the ACF/PACF plots to find (p,q) and the seasonal (P,Q) parameters. "
-                "The 'm' parameter would be {decomposition_results.get('period', 'N/A')}."
+                f"The 'm' parameter would be {decomposition_results.get('period', 'N/A')}."
             )
 
         elif not is_stationary and not is_decomposed:
-            # Case 3: Non-Stationary, No Seasonality (or non-datetime index)
             title = "Recommendation: Tune ARIMA(p,d,q) Model"
             recommendation = (
-                "The ADF test shows your data is [ non-stationary (d>0) ]. "
+                "The ADF test shows your data is <strong>non-stationary (d>0)</strong>. "
                 "The decomposition plot was skipped (likely due to a non-datetime index or short series), "
                 "so a standard ARIMA model is the correct approach."
             )
             if has_arima_residuals:
+                model_name = arima_results.get('model_order', 'ARIMA(1,1,1)')
                 next_steps = (
-                    "Our [ ARIMA(1,1,1) trial ] is a good starting point. Now, look at the [ ACF/PACF plots ] to find better 'p' and 'q' values. "
-                    "Check the 'Residual ACF Plot': if there are still large spikes, it means the (1,1,1) model is not perfect and can be improved by tuning 'p' or 'q'."
+                    f"Our <strong>{model_name} trial</strong> is a good starting point. "
+                    "Check the <strong>'Residual ACF Plot'</strong>: if there are still large spikes, it means the model can be improved by tuning 'p' or 'q' based on the <strong>ACF/PACF plots</strong>."
                 )
             else:
                 next_steps = "Use the ACF/PACF plots to determine the (p,d,q) orders for an ARIMA model."
         
         else:
-            # Fallback
             title = "Summary"
             recommendation = "Analysis complete. Review the plots to determine the best model."
             next_steps = "Check for stationarity, seasonality, and use the ACF/PACF plots to guide your model selection."
@@ -464,7 +516,6 @@ def inspect_csv():
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        # We read 5 rows for inspection
         df = pd.read_csv(file, nrows=5)
         return jsonify({
             "filename": file.filename,
@@ -481,12 +532,15 @@ def analyze_time_series():
     file = request.files['file']
     date_column = request.form.get('date_column')
     value_column = request.form.get('value_column')
-    nrows = request.form.get('nrows') # NEW
+    nrows = request.form.get('nrows')
+    
+    # --- NEW: Get the auto_tune value ---
+    auto_tune_form = request.form.get('auto_tune') # This will be 'true' or None
+    auto_tune = True if auto_tune_form == 'true' else False
 
     if not date_column or not value_column:
         return jsonify({"error": "Missing date_column or value_column"}), 400
 
-    # --- NEW: Parse nrows ---
     nrows_to_read = None
     if nrows:
         try:
@@ -495,12 +549,9 @@ def analyze_time_series():
                 nrows_to_read = None
         except ValueError:
             nrows_to_read = None
-    # --- END NEW ---
 
     try:
-        # We need to read the file into memory to use file.seek(0) later
         file_buffer = io.BytesIO(file.read())
-        # --- MODIFIED: Use nrows_to_read ---
         df = pd.read_csv(file_buffer, nrows=nrows_to_read)
     except Exception as e:
         return jsonify({"error": f"Error reading CSV file: {e}"}), 400
@@ -508,50 +559,37 @@ def analyze_time_series():
     if date_column not in df.columns or value_column not in df.columns:
         return jsonify({"error": f"One or both columns ('{date_column}', '{value_column}') not found."}), 404
         
-    original_rows = len(df) # NEW: Original rows is the number we just read
+    original_rows = len(df)
 
     try:
-        # --- NEW CLEANING LOGIC ---
-        
-        # 1. Clean Value Column (e.g., "sales")
         df[value_column] = df[value_column].astype(str).str.replace(r"[^\d\.\-]", "", regex=True)
         df[value_column] = pd.to_numeric(df[value_column], errors='coerce')
         
-        # 2. Clean Date Column (e.g., "mount")
         df[date_column] = pd.to_datetime(df[date_column], errors='coerce', format='mixed')
         
         is_datetime_index = True
         
-        # 3. Check if date conversion failed (e.g., >95% are NaT)
         if df[date_column].isnull().sum() >= len(df) * 0.95:
             print("Warning: Date conversion failed. Falling back to simple index.")
             is_datetime_index = False
             
-            # Reread the file to get the original string dates
             file_buffer.seek(0)
-            # --- MODIFIED: Use nrows_to_read ---
             df = pd.read_csv(file_buffer, nrows=nrows_to_read)
             
-            # Just clean the value column again
             df[value_column] = df[value_column].astype(str).str.replace(r"[^\d\.\-]", "", regex=True)
             df[value_column] = pd.to_numeric(df[value_column], errors='coerce')
             
-            # original_rows = len(df) # Already set
-            df.dropna(subset=[value_column], inplace=True) # Only drop if value is bad
+            df.dropna(subset=[value_column], inplace=True)
             cleaned_rows = len(df)
         else:
             print("Info: Date conversion successful.")
             is_datetime_index = True
-            # original_rows = len(df) # Already set
             df.dropna(subset=[date_column, value_column], inplace=True)
             cleaned_rows = len(df)
-        
-        # --- END NEW CLEANING LOGIC ---
         
         if cleaned_rows == 0:
             return jsonify({"error": f"Analysis failed. After cleaning, 0 valid data rows were found. Check if '{date_column}' contains valid dates/text or if '{value_column}' contains valid numbers."}), 400
         
-        # --- NEW: Check for duplicate dates BEFORE setting index ---
         if is_datetime_index and df[date_column].duplicated().any():
             return jsonify({"error": f"Analysis failed. Your date column '{date_column}' contains duplicate dates. Please aggregate or clean the file and try again."}), 400
             
@@ -564,12 +602,9 @@ def analyze_time_series():
             df.sort_index(inplace=True)
             ts = df[value_column]
             
-            # --- NEW: Check for massive date gaps (MemoryError prevention) ---
             try:
                 inferred_freq = pd.infer_freq(ts.index)
                 freq = inferred_freq or 'D'
-                # Limit the number of rows to 1 million to prevent memory crashes
-                # This checks if resampling would create a huge dataframe
                 date_range_days = (ts.index.max() - ts.index.min()).days
                 if freq == 'D' and date_range_days > 1_000_000:
                      raise MemoryError(f"Date range is too large ({date_range_days} days) to interpolate. Analysis skipped.")
@@ -577,12 +612,11 @@ def analyze_time_series():
                 ts_interpolated = ts.asfreq(freq)
             except (MemoryError, ValueError) as e:
                  print(f"Warning: Interpolation failed. {e}. Continuing without interpolation.")
-                 # Fallback: just use the raw time series, skip interpolation
-                 is_datetime_index = False # Treat it as a simple index from now on
+                 is_datetime_index = False
                  ts_interpolated = ts.copy()
                  freq = 'unknown'
 
-            if is_datetime_index: # If interpolation succeeded
+            if is_datetime_index:
                 interpolation_method = 'time'
                 if not isinstance(ts_interpolated.index, pd.DatetimeIndex):
                      interpolation_method = 'linear'
@@ -591,8 +625,8 @@ def analyze_time_series():
                     ts_interpolated.bfill(inplace=True)
         else:
             ts = df[value_column]
-            ts_interpolated = ts.copy() # Use the raw series
-            freq = 'unknown' # Set a flag
+            ts_interpolated = ts.copy()
+            freq = 'unknown'
             
     except Exception as e:
         print(f"ERROR: {e}")
@@ -646,7 +680,7 @@ def analyze_time_series():
         decomposition_results = run_decomposition_analysis(ts_interpolated.copy())
 
     # --- 7. Perform Simple ARIMA Analysis ---
-    arima_results = run_simple_arima_analysis(ts_interpolated.copy(), freq, is_datetime_index)
+    arima_results = run_simple_arima_analysis(ts_interpolated.copy(), freq, is_datetime_index, auto_tune) # MODIFIED
     
     # --- 8. Generate Final Summary ---
     final_summary = generate_final_summary(
@@ -662,8 +696,8 @@ def analyze_time_series():
             "date_column": date_column,
             "value_column": value_column,
             "data_cleaning": {
-                "rows_read": nrows_to_read if nrows_to_read else "all", # NEW
-                "original_rows": int(original_rows), # Renamed for clarity
+                "rows_read": nrows_to_read if nrows_to_read else "all",
+                "original_rows": int(original_rows),
                 "cleaned_rows": int(cleaned_rows),
                 "rows_dropped": int(original_rows - cleaned_rows)
             }
@@ -673,7 +707,7 @@ def analyze_time_series():
             "variance": original_variance,
             "plot_base64": original_plot_b64,
             "lag_plot_base64": lag_plot_b64,
-            "rolling_stats_plot_base64": rolling_stats_plot_b64, # Will be null if non-datetime
+            "rolling_stats_plot_base64": rolling_stats_plot_b64,
             "stationarity_test": stationarity_test
         },
         "stationary_results": stationary_results,
