@@ -8,7 +8,7 @@ from statsmodels.tsa.stattools import adfuller
 from pandas.plotting import lag_plot
 import numpy as np
 import re
-import warnings # NEW: Import warnings
+import warnings
 
 # --- IMPORTS ---
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
@@ -17,21 +17,17 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from math import sqrt
 from statsmodels.tsa.seasonal import seasonal_decompose
 
-# --- Matplotlib Configuration ---
+
 plt.switch_backend('Agg')
 
-# --- Initialize Flask App ---
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
-# --- Route to Serve the HTML Webpage ---
+
 @app.route('/')
 def home():
     """Serves the main HTML page."""
     return render_template('index.html')
-
-# ===--- PLOTTING HELPER FUNCTIONS ---===
-# (All plotting functions remain the same)
 
 def create_plot_base64(series: pd.Series, title: str, xlabel: str = "Time", ylabel: str = "Value") -> str:
     """Generates a line plot from a pandas Series and returns it as a base64 encoded string."""
