@@ -10,23 +10,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        /* Custom styles */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #111827; /* Dark background */
-            color: #d1d5db; /* Light text */
+            background-color: #111827;
+            color: #d1d5db;
         }
         
         .gradient-text {
-            color: #60a5fa; /* tailwind-blue-400 */
+            color: #60a5fa; 
         }
 
         .file-drop-area {
             transition: all 0.3s ease;
         }
         .file-drop-area.drag-over {
-            border-color: #3b82f6; /* Blue */
-            background-color: #1f2937; /* Darker gray */
+            border-color: #3b82f6; 
+            background-color: #1f2937;
         }
         
         .loader {
@@ -72,7 +71,6 @@
             margin: 0; 
         }
 
-        /* NEW: Custom checkbox style */
         input[type="checkbox"] {
             background-image: none;
             background-position: center;
@@ -437,7 +435,6 @@
         const resultsLoader = document.getElementById("results-loader");
         const resultsContent = document.getElementById("results-content");
         
-        // --- Result Fields (Summary) ---
         const summaryFilename = document.getElementById("summary-filename");
         const summaryDateCol = document.getElementById("summary-date-col");
         const summaryValueCol = document.getElementById("summary-value-col");
@@ -445,7 +442,6 @@
         const summaryRowsCleaned = document.getElementById("summary-rows-cleaned");
         const summaryRowsDropped = document.getElementById("summary-rows-dropped");
 
-        // --- Result Fields (Base) ---
         const originalMean = document.getElementById("original-mean");
         const originalVariance = document.getElementById("original-variance");
         const originalStationary = document.getElementById("original-stationary");
@@ -456,11 +452,9 @@
         const rollingStatsPlot = document.getElementById("rolling-stats-plot");
         const rollingStatsContainer = document.getElementById("rolling-stats-container");
 
-        // --- Result Fields (Decomposition) ---
         const decompositionContainer = document.getElementById("decomposition-container");
         const decompositionPlot = document.getElementById("decomposition-plot");
 
-        // --- Result Fields (Stationary) ---
         const stationaryResultsContainer = document.getElementById("stationary-results-container");
         const stationaryMethod = document.getElementById("stationary-method");
         const stationaryMean = document.getElementById("stationary-mean");
@@ -469,7 +463,6 @@
         const stationaryPValue = document.getElementById("stationary-p-value");
         const stationaryPlot = document.getElementById("stationary-plot");
 
-        // --- Result Fields (ARIMA) ---
         const arimaResultsContainer = document.getElementById("arima-results-container");
         const arimaTitle = document.getElementById("arima-title"); // NEW
         const arimaPreprocessingMsg = document.getElementById("arima-preprocessing-msg");
@@ -482,14 +475,12 @@
         const residualPlot = document.getElementById("residual-plot");
         const residualAcfPlot = document.getElementById("residual-acf-plot");
 
-        // --- Result Fields (Final Summary) ---
         const finalSummaryContainer = document.getElementById("final-summary-container");
         const summaryTitle = document.getElementById("summary-title");
         const summaryRecommendation = document.getElementById("summary-recommendation");
         const summaryNextSteps = document.getElementById("summary-next-steps");
 
 
-        // --- File Drop Area Logic ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             fileDropArea.addEventListener(eventName, preventDefaults, false);
         });
@@ -521,7 +512,6 @@
             `;
         }
 
-        // --- Event Listener: Step 1 (Inspect) ---
         uploadForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             showUploadError(null);
@@ -553,14 +543,13 @@
             }
         });
 
-        // --- Event Listener: Step 2 (Analyze) ---
         analyzeForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             showAnalyzeError(null);
             const dateColumn = dateColumnSelect.value;
             const valueColumn = valueColumnSelect.value;
             const nrows = nrowsInput.value;
-            const autoTune = autoTuneCheckbox.checked; // NEW: Get checkbox state
+            const autoTune = autoTuneCheckbox.checked;
             
             if (!dateColumn || !valueColumn) {
                 showAnalyzeError("Please select both a date column and a value column.");
@@ -577,7 +566,7 @@
             if (nrows) {
                 formData.append("nrows", nrows);
             }
-            if (autoTune) { // NEW: Add to form data if checked
+            if (autoTune) {
                 formData.append("auto_tune", "true");
             }
             
@@ -586,8 +575,7 @@
             resultsLoader.classList.remove("hidden");
             resultsContent.classList.add("hidden");
             
-            // Hide all result cards
-            stationaryResultsContainer.classList.add("hidden");
+
             arimaResultsContainer.classList.add("hidden");
             decompositionContainer.classList.add("hidden"); 
             finalSummaryContainer.classList.add("hidden");
@@ -611,9 +599,7 @@
             }
         });
 
-        // --- Helper Function: Display Results ---
         function displayResults(data) {
-            // --- 0. Analysis Summary ---
             const summary = data.analysis_summary;
             summaryFilename.textContent = summary.filename;
             summaryDateCol.textContent = summary.date_column;
@@ -622,7 +608,6 @@
             summaryRowsCleaned.textContent = summary.data_cleaning.cleaned_rows;
             summaryRowsDropped.textContent = `-${summary.data_cleaning.rows_dropped}`;
         
-            // --- 1. Original Data ---
             const orig = data.original_data;
             const origTest = orig.stationarity_test;
             originalMean.textContent = parseFloat(orig.mean).toFixed(4);
@@ -659,7 +644,6 @@
                 if(decomp) console.error("Decomposition Error:", decomp.error);
             }
 
-            // --- 3. Stationary Data ---
             const stat = data.stationary_results;
             if (stat && !stat.error) {
                 const statTest = stat.stationarity_test;
@@ -680,10 +664,9 @@
                 stationaryResultsContainer.classList.add("hidden");
             }
             
-            // --- 4. Auto-ARIMA Data ---
             const arima = data.arima_results;
             if (arima && !arima.error) {
-                // *** NEW: Update Title ***
+
                 arimaTitle.textContent = `${arima.model_order || 'ARIMA'} Trial Model`;
                 
                 arimaPreprocessingMsg.textContent = arima.preprocessing_message || '';
@@ -701,12 +684,12 @@
                 if (arima && arima.error) console.error("ARIMA Error:", arima.error);
             }
             
-            // --- 5. Final Summary ---
+
             const final = data.final_summary;
             if (final && !final.error) {
                 summaryTitle.textContent = final.title;
-                summaryRecommendation.innerHTML = final.recommendation; // Use innerHTML to render <strong>
-                summaryNextSteps.innerHTML = final.next_steps; // Use innerHTML to render <strong>
+                summaryRecommendation.innerHTML = final.recommendation;
+                summaryNextSteps.innerHTML = final.next_steps; 
                 finalSummaryContainer.classList.remove("hidden");
             } else {
                 finalSummaryContainer.classList.add("hidden");
@@ -714,7 +697,7 @@
             }
         }
 
-        // --- Helper Function: Populate Select ---
+
         function populateSelect(selectElement, columns) {
             selectElement.innerHTML = '<option value="">Select a column...</option>';
             columns.forEach(col => {
@@ -725,7 +708,7 @@
             });
         }
         
-        // --- UI Helpers ---
+
         function showUploadLoader(isLoading) {
             if (isLoading) {
                 uploadLoader.classList.remove("hidden");
