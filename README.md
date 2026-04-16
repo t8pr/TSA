@@ -1,6 +1,6 @@
 <div align="center">
   
-# ⚡ TIME SERIES ANALYZER (TSA) ⚡
+#  TIME SERIES ANALYZER (TSA) 
   
 <svg class="w-24 h-24 text-blue-500 mb-3" fill="none" stroke="#3b82f6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.5 2A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 9.5 7v0A2.5 2.5 0 0 1 7 9.5v0A2.5 2.5 0 0 1 9.5 12v0A2.5 2.5 0 0 1 7 14.5v0A2.5 2.5 0 0 1 9.5 17v0A2.5 2.5 0 0 1 7 19.5v0A2.5 2.5 0 0 1 9.5 22M14.5 2a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5v0a2.5 2.5 0 0 0 0 5M2 12h5.5M16.5 12H22M12 7.5v9M7 14.5v-5"></path></svg>
 
